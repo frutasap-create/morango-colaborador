@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estoque Futuro — AP Frutas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --verde: #1C9842;
+    --verde-escuro: #166e30;
+    --verde-claro: #e8f5ed;
+    --laranja: #F39200;
+    --laranja-claro: #fff3e0;
+    --cinza: #f5f5f5;
+    --cinza-medio: #e0e0e0;
+    --cinza-escuro: #666;
+    --texto: #1a1a1a;
+    --vermelho: #d32f2f;
+    --azul: #1565c0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f4f0; color: var(--texto); min-height: 100vh; }
+  header { background: var(--verde); color: white; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  header h1 { font-size: 18px; font-weight: 700; }
+  header p { font-size: 12px; opacity: 0.8; margin-top: 2px; }
+  .data-selector { display: flex; align-items: center; gap: 8px; }
+  header input[type="date"] { padding: 6px 10px; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; color: var(--verde-escuro); }
+  .btn-hoje { background: var(--laranja); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .tabs { display: flex; background: var(--verde-escuro); overflow-x: auto; }
+  .tab { padding: 12px 20px; color: rgba(255,255,255,0.7); cursor: pointer; font-size: 14px; font-weight: 600; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .tab:hover { color: white; }
+  .tab.active { color: white; border-bottom-color: var(--laranja); }
+  main { padding: 16px; max-width: 900px; margin: 0 auto; }
+  .secao { display: none; }
+  .secao.ativa { display: block; }
+  .cards-resumo { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .card-resumo { background: white; border-radius: 10px; padding: 14px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-top: 3px solid var(--verde); }
+  .card-resumo.laranja { border-top-color: var(--laranja); }
+  .card-resumo.azul { border-top-color: var(--azul); }
+  .card-resumo.vermelho { border-top-color: var(--vermelho); }
+  .card-resumo .valor { font-size: 22px; font-weight: 800; color: var(--verde); }
+  .card-resumo.laranja .valor { color: var(--laranja); }
+  .card-resumo.azul .valor { color: var(--azul); }
+  .card-resumo.vermelho .valor { color: var(--vermelho); }
+  .card-resumo .label { font-size: 10px; color: var(--cinza-escuro); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .tabela-container { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 16px; }
+  .tabela-titulo { padding: 10px 16px; font-size: 14px; font-weight: 700; color: white; }
+  .tabela-titulo.verde { background: var(--verde); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--cinza); padding: 8px 10px; text-align: center; font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--cinza-escuro); border-bottom: 2px solid var(--cinza-medio); }
+  thead th:first-child { text-align: left; }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid var(--cinza-medio); text-align: center; font-size: 13px; font-weight: 600; }
+  tbody td:first-child { text-align: left; color: var(--verde-escuro); }
+  tbody tr:hover { background: var(--verde-claro); }
+  tr.total-row td { font-weight: 800; background: var(--verde-claro); color: var(--verde-escuro); border-top: 2px solid var(--verde); font-size: 14px; }
+  input.qty { width: 65px; padding: 4px 5px; border: 1px solid var(--cinza-medio); border-radius: 5px; text-align: center; font-size: 13px; font-weight: 600; background: var(--cinza); transition: all 0.15s; }
+  input.qty:focus { outline: none; border-color: var(--verde); background: white; box-shadow: 0 0 0 2px rgba(28,152,66,0.15); }
+  input.qty.editado { background: #fffde7; border-color: var(--laranja); }
+  input.qty[readonly] { background: #fff3e0; color: var(--laranja); border-color: var(--laranja); cursor: not-allowed; }
+  .btn-salvar { background: var(--verde); color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: block; margin: 0 auto 20px; box-shadow: 0 2px 8px rgba(28,152,66,0.3); transition: all 0.2s; }
+  .btn-salvar:hover { background: var(--verde-escuro); }
+  .btn-salvar:disabled { background: var(--cinza-medio); cursor: not-allowed; }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--verde-escuro); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; z-index: 1000; transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .toast.erro { background: var(--vermelho); }
+  .toast.visivel { transform: translateX(-50%) translateY(0); }
+  .loading { text-align: center; padding: 40px; color: var(--cinza-escuro); }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--cinza-medio); border-top-color: var(--verde); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .aviso-readonly { background: var(--laranja-claro); border-left: 4px solid var(--laranja); padding: 10px 14px; border-radius: 6px; font-size: 13px; color: #7a4a00; margin-bottom: 12px; font-weight: 600; }
+
+  /* PRINT */
+  .btn-print { background: #25D366; color: white; border: none; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto 20px; box-shadow: 0 4px 12px rgba(37,211,102,0.4); transition: all 0.2s; }
+  .btn-print:hover { transform: translateY(-2px); }
+  #print-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.12); max-width: 440px; margin: 0 auto 20px; }
+  .print-header { background: linear-gradient(135deg, var(--verde) 0%, var(--verde-escuro) 100%); padding: 20px; text-align: center; color: white; }
+  .print-header h2 { font-size: 20px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
+  .print-data { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+  .print-hora { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .print-body { padding: 14px; }
+  .print-produto { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; background: var(--cinza); border-left: 4px solid var(--verde); }
+  .print-produto.negativo { border-left-color: var(--vermelho); background: #ffebee; }
+  .print-produto.zero { border-left-color: var(--laranja); background: var(--laranja-claro); }
+  .print-produto-nome { font-size: 15px; font-weight: 700; }
+  .print-produto-detalhes { font-size: 11px; color: var(--cinza-escuro); margin-top: 2px; }
+  .print-produto-saldo { font-size: 26px; font-weight: 900; color: var(--verde); text-align: right; }
+  .print-produto.negativo .print-produto-saldo { color: var(--vermelho); }
+  .print-produto.zero .print-produto-saldo { color: var(--laranja); }
+  .print-status { font-size: 11px; font-weight: 700; text-align: right; }
+  .print-total { background: var(--verde); color: white; border-radius: 10px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .print-total-label { font-size: 14px; font-weight: 700; }
+  .print-total-valor { font-size: 28px; font-weight: 900; }
+  .print-footer { background: var(--cinza); padding: 10px; text-align: center; font-size: 11px; color: var(--cinza-escuro); }
+  @media (max-width: 600px) { header { flex-direction: column; gap: 8px; align-items: flex-start; } input.qty { width: 55px; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🍓 Estoque Futuro — AP Frutas</h1>
+    <p>Lançamento do colaborador</p>
+  </div>
+  <div class="data-selector">
+    <input type="date" id="dataSelecionada">
+    <button class="btn-hoje" onclick="irParaHoje()">Hoje</button>
+  </div>
+</header>
+<div class="tabs">
+  <div class="tab active" onclick="mudarAba('lancamento', this)">📋 Lançamento</div>
+  <div class="tab" onclick="mudarAba('resultado', this)">📦 Estoque Final</div>
+</div>
+<main>
+  <div id="secao-lancamento" class="secao ativa">
+    <div id="lancamento-conteudo"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+  <div id="secao-resultado" class="secao">
+    <div id="resultado-conteudo"><div class="loading"><div class="spinner"></div>Calculando...</div></div>
+  </div>
+</main>
+<div class="toast" id="toast"></div>
+<script>
+const SUPABASE_URL = 'https://cagorqpetzsgmttkvlcm.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_N3Y-dergVFNGpb-qZWjDHQ_46YHsdb4';
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+let produtos = [], dataSel = '';
+let dadosColab = {}, saidasPrincipais = {};
+
+window.addEventListener('DOMContentLoaded', async () => {
+  const hoje = new Date().toISOString().split('T')[0];
+  document.getElementById('dataSelecionada').value = hoje;
+  dataSel = hoje;
+  document.getElementById('dataSelecionada').addEventListener('change', async (e) => { dataSel = e.target.value; await carregarTudo(); });
+  await carregarTudo();
+});
+
+function irParaHoje() { const h = new Date().toISOString().split('T')[0]; document.getElementById('dataSelecionada').value = h; dataSel = h; carregarTudo(); }
+function formatarData(d) { const [a,m,dia] = d.split('-'); return `${dia}/${m}/${a}`; }
+function formatarHora() { return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+
+async function carregarTudo() {
+  const { data: prods } = await db.from('produtos').select('*').eq('ativo', true).order('ordem');
+  produtos = prods || [];
+  dadosColab = {};
+  produtos.forEach(p => dadosColab[p.id] = { inicial: 0, entrada: 0, quebra: 0 });
+  saidasPrincipais = {};
+  produtos.forEach(p => saidasPrincipais[p.id] = 0);
+  const { data: saiData } = await db.from('saidas').select('produto_id, quantidade').eq('data', dataSel);
+  (saiData || []).forEach(r => { if (saidasPrincipais[r.produto_id] !== undefined) saidasPrincipais[r.produto_id] += r.quantidade || 0; });
+  const { data: colabData } = await db.from('estoque_colaborador').select('*').eq('data', dataSel);
+  (colabData || []).forEach(r => { if (dadosColab[r.produto_id]) dadosColab[r.produto_id] = { inicial: r.estoque_inicial || 0, entrada: r.entrada || 0, quebra: r.quebra || 0 }; });
+  renderizarLancamento();
+}
+
+function renderizarLancamento() {
+  const conteudo = document.getElementById('lancamento-conteudo');
+  const totIni = produtos.reduce((s,p) => s+(dadosColab[p.id]?.inicial||0), 0);
+  const totEnt = produtos.reduce((s,p) => s+(dadosColab[p.id]?.entrada||0), 0);
+  const totSai = produtos.reduce((s,p) => s+(saidasPrincipais[p.id]||0), 0);
+  const totQbr = produtos.reduce((s,p) => s+(dadosColab[p.id]?.quebra||0), 0);
+  const totFin = totIni + totEnt - totSai - totQbr;
+  const corTF = totFin < 0 ? 'var(--vermelho)' : totFin === 0 ? 'var(--laranja)' : 'var(--azul)';
+
+  let html = `<div class="cards-resumo">
+    <div class="card-resumo"><div class="valor">${totIni}</div><div class="label">Est. Inicial</div></div>
+    <div class="card-resumo"><div class="valor">${totEnt}</div><div class="label">Entradas</div></div>
+    <div class="card-resumo laranja"><div class="valor">${totSai}</div><div class="label">Saídas 🔒</div></div>
+    <div class="card-resumo vermelho"><div class="valor">${totQbr}</div><div class="label">Quebras</div></div>
+    <div class="card-resumo azul"><div class="valor">${totFin}</div><div class="label">Est. Final</div></div>
+  </div>
+  <div class="aviso-readonly">🔒 Saídas preenchidas pelo gestor — não editável</div>
+  <div class="tabela-container">
+    <div class="tabela-titulo verde">📋 Lançamento — ${formatarData(dataSel)}</div>
+    <table><thead><tr>
+      <th>Produto</th><th>Est. Inicial</th><th>+ Entradas</th><th>− Saídas 🔒</th><th>− Quebras</th><th>= Final</th>
+    </tr></thead><tbody>`;
+
+  produtos.forEach(p => {
+    const d = dadosColab[p.id] || { inicial:0, entrada:0, quebra:0 };
+    const sai = saidasPrincipais[p.id] || 0;
+    const fin = d.inicial + d.entrada - sai - d.quebra;
+    const cor = fin < 0 ? 'var(--vermelho)' : fin === 0 ? 'var(--laranja)' : 'var(--verde)';
+    html += `<tr>
+      <td>${p.nome}</td>
+      <td><input type="number" class="qty" min="0" value="${d.inicial}" data-prod="${p.id}" data-campo="inicial" oninput="atualizarColab(this)" onfocus="this.select()"></td>
+      <td><input type="number" class="qty" min="0" value="${d.entrada}" data-prod="${p.id}" data-campo="entrada" oninput="atualizarColab(this)" onfocus="this.select()"></td>
+      <td><input type="number" class="qty" value="${sai}" readonly></td>
+      <td><input type="number" class="qty" min="0" value="${d.quebra}" data-prod="${p.id}" data-campo="quebra" oninput="atualizarColab(this)" onfocus="this.select()" style="border-color:var(--vermelho)"></td>
+      <td id="final-${p.id}" style="color:${cor};font-weight:800;font-size:14px">${fin>0?'+':''}${fin}</td>
+    </tr>`;
+  });
+
+  html += `<tr class="total-row">
+    <td>TOTAL</td>
+    <td id="tot-inicial">${totIni}</td>
+    <td id="tot-entrada">${totEnt}</td>
+    <td style="color:var(--laranja)">${totSai}</td>
+    <td id="tot-quebra" style="color:var(--vermelho)">${totQbr}</td>
+    <td id="tot-final" style="color:${corTF}">${totFin>0?'+':''}${totFin}</td>
+  </tr></tbody></table></div>
+  <button class="btn-salvar" onclick="salvarColab()">💾 Salvar Lançamento</button>`;
+
+  conteudo.innerHTML = html;
+}
+
+function atualizarColab(input) {
+  const pid = input.dataset.prod, campo = input.dataset.campo;
+  if (!dadosColab[pid]) dadosColab[pid] = { inicial:0, entrada:0, quebra:0 };
+  dadosColab[pid][campo] = parseInt(input.value) || 0;
+  input.classList.add('editado');
+  const d = dadosColab[pid], sai = saidasPrincipais[pid] || 0;
+  const fin = d.inicial + d.entrada - sai - d.quebra;
+  const el = document.getElementById(`final-${pid}`);
+  if (el) { el.textContent = (fin>0?'+':'')+fin; el.style.color = fin<0?'var(--vermelho)':fin===0?'var(--laranja)':'var(--verde)'; }
+  const totIni = produtos.reduce((s,p)=>s+(dadosColab[p.id]?.inicial||0),0);
+  const totEnt = produtos.reduce((s,p)=>s+(dadosColab[p.id]?.entrada||0),0);
+  const totSai = produtos.reduce((s,p)=>s+(saidasPrincipais[p.id]||0),0);
+  const totQbr = produtos.reduce((s,p)=>s+(dadosColab[p.id]?.quebra||0),0);
+  const totFin = totIni+totEnt-totSai-totQbr;
+  const corTF = totFin<0?'var(--vermelho)':totFin===0?'var(--laranja)':'var(--azul)';
+  const s=(id,v,c)=>{const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
+  s('tot-inicial',totIni); s('tot-entrada',totEnt); s('tot-quebra',totQbr,'var(--vermelho)'); s('tot-final',(totFin>0?'+':'')+totFin,corTF);
+}
+
+async function salvarColab() {
+  const btn = document.querySelector('#secao-lancamento .btn-salvar');
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    await db.from('estoque_colaborador').delete().eq('data', dataSel);
+    const rows = produtos.map(p => ({ data: dataSel, produto_id: p.id, estoque_inicial: dadosColab[p.id]?.inicial||0, entrada: dadosColab[p.id]?.entrada||0, quebra: dadosColab[p.id]?.quebra||0 }));
+    const { error } = await db.from('estoque_colaborador').insert(rows);
+    if (error) throw error;
+    mostrarToast('✅ Lançamento salvo!');
+    document.querySelectorAll('input.qty.editado').forEach(i=>i.classList.remove('editado'));
+  } catch(e) { mostrarToast('❌ Erro: '+e.message, true); }
+  btn.disabled = false; btn.textContent = '💾 Salvar Lançamento';
+}
+
+async function carregarResultado() {
+  const conteudo = document.getElementById('resultado-conteudo');
+  conteudo.innerHTML = '<div class="loading"><div class="spinner"></div>Calculando...</div>';
+  const saldos = produtos.map(p => {
+    const d = dadosColab[p.id] || { inicial:0, entrada:0, quebra:0 };
+    const sai = saidasPrincipais[p.id] || 0;
+    const fin = d.inicial + d.entrada - sai - d.quebra;
+    return { produto: p, inicial: d.inicial||0, entrada: d.entrada||0, sai, quebra: d.quebra||0, fin };
+  });
+  const totalFin = saldos.reduce((s,r)=>s+r.fin, 0);
+
+  let html = `<button class="btn-print" onclick="mostrarToast('📲 Tire um print desta tela para enviar no WhatsApp!')" style="display:flex">📲 Gerar Print para WhatsApp</button>
+  <div id="print-card">
+    <div class="print-header">
+      <h2>🍓 ESTOQUE FUTURO FRUTAS AP</h2>
+      <div class="print-data">📅 ${formatarData(dataSel)}</div>
+      <div class="print-hora">⏰ ${formatarHora()}</div>
+    </div>
+    <div class="print-body">`;
+
+  saldos.forEach(r => {
+    const cls = r.fin<0?'negativo':r.fin===0?'zero':'';
+    const cor = r.fin<0?'var(--vermelho)':r.fin===0?'var(--laranja)':'var(--verde)';
+    const status = r.fin>0?'✅ OK':r.fin<0?'❌ FALTA':'➡️ ZERO';
+    html += `<div class="print-produto ${cls}">
+      <div>
+        <div class="print-produto-nome">${r.produto.nome}</div>
+        <div class="print-produto-detalhes">Ini:${r.inicial} +Ent:${r.entrada} -Sai:${r.sai} -Qbr:${r.quebra}</div>
+      </div>
+      <div>
+        <div class="print-produto-saldo">${r.fin>0?'+':''}${r.fin}</div>
+        <div class="print-status" style="color:${cor}">${status}</div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="print-total">
+    <div class="print-total-label">TOTAL GERAL</div>
+    <div class="print-total-valor">${totalFin>0?'+':''}${totalFin}</div>
+  </div></div>
+  <div class="print-footer">AP Frutas & Verduras • ${formatarData(dataSel)}</div>
+  </div>`;
+
+  conteudo.innerHTML = html;
+}
+
+function mudarAba(aba, el) {
+  document.querySelectorAll('.secao').forEach(s=>s.classList.remove('ativa'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(`secao-${aba}`).classList.add('ativa');
+  el.classList.add('active');
+  if (aba === 'resultado') carregarResultado();
+}
+
+function mostrarToast(msg, erro=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${erro?'erro':''} visivel`;
+  setTimeout(()=>t.classList.remove('visivel'), 3000);
+}
+</script>
+</body>
+</html>
