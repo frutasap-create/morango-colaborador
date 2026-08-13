@@ -109,11 +109,7 @@
   .print-total-label { font-size: 14px; font-weight: 700; }
   .print-total-valor { font-size: 28px; font-weight: 900; }
   .print-footer { background: var(--cinza); padding: 10px; text-align: center; font-size: 11px; color: var(--cinza-escuro); }
-  .print-grafico-secao { padding: 4px 14px 14px; text-align: center; }
-  .print-grafico-titulo { font-size: 12px; font-weight: 800; color: var(--verde-escuro); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-  .print-legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; margin-top: 10px; font-size: 11px; }
-  .print-legenda-item { display: flex; align-items: center; gap: 5px; font-weight: 600; }
-  .print-legenda-cor { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .print-produto-pct { font-size: 12px; font-weight: 800; color: var(--verde-escuro); text-align: right; margin-top: 1px; }
   .print-aviso-final { margin: 0 14px 14px; border-radius: 10px; padding: 14px; text-align: center; }
   .print-aviso-final.ok { background: var(--verde-claro); border: 2px solid var(--verde); }
   .print-aviso-final.falta { background: #ffebee; border: 2px solid var(--vermelho); }
@@ -406,8 +402,6 @@ async function sincronizarComPlanner() {
   }
 }
 
-const CORES_GRAFICO = ['#1C9842','#F39200','#1565c0','#d32f2f','#9c27b0','#00897b','#5d4037','#c0ca33','#8d6e63','#455a64','#e91e63','#3949ab'];
-
 async function carregarResultado() {
   const conteudo = document.getElementById('resultado-conteudo');
   conteudo.innerHTML = '<div class="loading"><div class="spinner"></div>Calculando...</div>';
@@ -448,9 +442,12 @@ async function carregarResultado() {
     <div class="print-conferencia ${conferenciaClasse}">${conferenciaTexto}</div>
     <div class="print-body">`;
 
+  const totalFisicoPositivo = linhas.filter(r => r.fisico > 0).reduce((s, r) => s + r.fisico, 0);
+
   linhas.forEach(r2 => {
     const cls = r2.fisico<0?'negativo':r2.fisico===0?'zero':'';
     const cor = r2.fisico<0?'var(--vermelho)':r2.fisico===0?'var(--laranja)':'var(--verde)';
+    const pct = (r2.fisico > 0 && totalFisicoPositivo > 0) ? ((r2.fisico / totalFisicoPositivo) * 100).toFixed(1) + '%' : '—';
     html += `<div class="print-produto ${cls}">
       <div>
         <div class="print-produto-nome">${r2.produto.nome}</div>
@@ -458,7 +455,7 @@ async function carregarResultado() {
       </div>
       <div>
         <div class="print-produto-saldo">${r2.fisico}</div>
-        <div class="print-status" style="color:${cor}">FÍSICO</div>
+        <div class="print-produto-pct">${pct}</div>
       </div>
     </div>`;
   });
@@ -467,12 +464,6 @@ async function carregarResultado() {
     <div class="print-total-label">TOTAL FÍSICO</div>
     <div class="print-total-valor">${r.totFisico}</div>
   </div></div>
-
-  <div class="print-grafico-secao">
-    <div class="print-grafico-titulo">📊 Proporção do Estoque Final por Produto</div>
-    <canvas id="grafico-pizza" width="220" height="220"></canvas>
-    <div class="print-legenda" id="legenda-pizza"></div>
-  </div>
 
   <div class="print-aviso-final ${avisoClasse}">
     <div class="print-aviso-final-titulo">${avisoTitulo}</div>
@@ -483,48 +474,6 @@ async function carregarResultado() {
   </div>`;
 
   conteudo.innerHTML = html;
-  desenharGraficoPizza(linhas);
-}
-
-function desenharGraficoPizza(linhas) {
-  const canvas = document.getElementById('grafico-pizza');
-  const legenda = document.getElementById('legenda-pizza');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width, H = canvas.height;
-  ctx.clearRect(0, 0, W, H);
-
-  const positivos = linhas.filter(r => r.fisico > 0);
-  const total = positivos.reduce((s, r) => s + r.fisico, 0);
-  const cx = W / 2, cy = H / 2, raio = Math.min(W, H) / 2 - 4;
-
-  if (total === 0) {
-    ctx.fillStyle = '#999';
-    ctx.font = '13px Segoe UI';
-    ctx.textAlign = 'center';
-    ctx.fillText('Sem estoque físico para exibir', cx, cy);
-    if (legenda) legenda.innerHTML = '';
-    return;
-  }
-
-  let anguloInicial = -Math.PI / 2;
-  let legendaHtml = '';
-  positivos.forEach((r, i) => {
-    const fatia = (r.fisico / total) * Math.PI * 2;
-    const cor = CORES_GRAFICO[i % CORES_GRAFICO.length];
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.arc(cx, cy, raio, anguloInicial, anguloInicial + fatia);
-    ctx.closePath();
-    ctx.fillStyle = cor;
-    ctx.fill();
-    anguloInicial += fatia;
-
-    const pct = ((r.fisico / total) * 100).toFixed(1);
-    legendaHtml += `<div class="print-legenda-item"><span class="print-legenda-cor" style="background:${cor}"></span>${r.produto.nome} — ${pct}%</div>`;
-  });
-
-  if (legenda) legenda.innerHTML = legendaHtml;
 }
 
 async function gerarImagem() {
