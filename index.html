@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Estoque Futuro — AP Frutas</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   :root {
     --verde: #1C9842;
@@ -44,6 +45,17 @@
   .card-resumo.azul .valor { color: var(--azul); }
   .card-resumo.vermelho .valor { color: var(--vermelho); }
   .card-resumo .label { font-size: 10px; color: var(--cinza-escuro); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .entrada-total-card { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 16px; border-left: 4px solid var(--azul); display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .entrada-total-card label { font-size: 13px; font-weight: 700; color: var(--verde-escuro); text-transform: uppercase; letter-spacing: 0.3px; }
+  .entrada-total-card input { width: 130px; padding: 10px; border: 2px solid var(--azul); border-radius: 8px; text-align: center; font-size: 20px; font-weight: 800; color: var(--azul); }
+  .conferencia-card { border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+  .conferencia-card.ok { background: var(--verde-claro); border: 2px solid var(--verde); }
+  .conferencia-card.erro { background: #ffebee; border: 2px solid var(--vermelho); }
+  .conferencia-card.pendente { background: var(--laranja-claro); border: 2px solid var(--laranja); }
+  .conferencia-titulo { font-size: 15px; font-weight: 800; margin-bottom: 8px; }
+  .conferencia-linhas { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; font-size: 12px; }
+  .conferencia-linhas div { background: rgba(255,255,255,0.6); border-radius: 6px; padding: 6px 8px; }
+  .conferencia-linhas b { display: block; font-size: 16px; }
   .tabela-container { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 16px; }
   .tabela-titulo { padding: 10px 16px; font-size: 14px; font-weight: 700; color: white; }
   .tabela-titulo.verde { background: var(--verde); }
@@ -58,16 +70,19 @@
   input.qty:focus { outline: none; border-color: var(--verde); background: white; box-shadow: 0 0 0 2px rgba(28,152,66,0.15); }
   input.qty.editado { background: #fffde7; border-color: var(--laranja); }
   input.qty[readonly] { background: #fff3e0; color: var(--laranja); border-color: var(--laranja); cursor: not-allowed; }
+  input.qty.fisico { border-color: var(--azul); background: #e3f2fd; }
+  input.qty.fisico::placeholder { color: var(--azul); opacity: 0.6; font-weight: 700; }
   .btn-salvar { background: var(--verde); color: white; border: none; padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: block; margin: 0 auto 20px; box-shadow: 0 2px 8px rgba(28,152,66,0.3); transition: all 0.2s; }
   .btn-salvar:hover { background: var(--verde-escuro); }
   .btn-salvar:disabled { background: var(--cinza-medio); cursor: not-allowed; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--verde-escuro); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; z-index: 1000; transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--verde-escuro); color: white; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; z-index: 1000; transition: transform 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3); max-width: 90vw; }
   .toast.erro { background: var(--vermelho); }
   .toast.visivel { transform: translateX(-50%) translateY(0); }
   .loading { text-align: center; padding: 40px; color: var(--cinza-escuro); }
   .spinner { width: 32px; height: 32px; border: 3px solid var(--cinza-medio); border-top-color: var(--verde); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .aviso-readonly { background: var(--laranja-claro); border-left: 4px solid var(--laranja); padding: 10px 14px; border-radius: 6px; font-size: 13px; color: #7a4a00; margin-bottom: 12px; font-weight: 600; }
+  .aviso-sync { background: var(--verde-claro); border-left: 4px solid var(--verde); padding: 10px 14px; border-radius: 6px; font-size: 12px; color: var(--verde-escuro); margin-bottom: 12px; font-weight: 600; }
 
   /* PRINT */
   .btn-print { background: #25D366; color: white; border: none; padding: 14px 32px; border-radius: 10px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: 0 auto 20px; box-shadow: 0 4px 12px rgba(37,211,102,0.4); transition: all 0.2s; }
@@ -77,6 +92,9 @@
   .print-header h2 { font-size: 20px; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; }
   .print-data { font-size: 13px; opacity: 0.85; margin-top: 4px; }
   .print-hora { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+  .print-conferencia { padding: 10px 20px; text-align: center; font-size: 13px; font-weight: 800; }
+  .print-conferencia.ok { background: var(--verde-claro); color: var(--verde-escuro); }
+  .print-conferencia.erro { background: #ffebee; color: var(--vermelho); }
   .print-body { padding: 14px; }
   .print-produto { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 10px; margin-bottom: 8px; background: var(--cinza); border-left: 4px solid var(--verde); }
   .print-produto.negativo { border-left-color: var(--vermelho); background: #ffebee; }
@@ -91,6 +109,20 @@
   .print-total-label { font-size: 14px; font-weight: 700; }
   .print-total-valor { font-size: 28px; font-weight: 900; }
   .print-footer { background: var(--cinza); padding: 10px; text-align: center; font-size: 11px; color: var(--cinza-escuro); }
+  .print-grafico-secao { padding: 4px 14px 14px; text-align: center; }
+  .print-grafico-titulo { font-size: 12px; font-weight: 800; color: var(--verde-escuro); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+  .print-legenda { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; margin-top: 10px; font-size: 11px; }
+  .print-legenda-item { display: flex; align-items: center; gap: 5px; font-weight: 600; }
+  .print-legenda-cor { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .print-aviso-final { margin: 0 14px 14px; border-radius: 10px; padding: 14px; text-align: center; }
+  .print-aviso-final.ok { background: var(--verde-claro); border: 2px solid var(--verde); }
+  .print-aviso-final.falta { background: #ffebee; border: 2px solid var(--vermelho); }
+  .print-aviso-final.sobra { background: var(--laranja-claro); border: 2px solid var(--laranja); }
+  .print-aviso-final-titulo { font-size: 15px; font-weight: 900; margin-bottom: 3px; }
+  .print-aviso-final.ok .print-aviso-final-titulo { color: var(--verde-escuro); }
+  .print-aviso-final.falta .print-aviso-final-titulo { color: var(--vermelho); }
+  .print-aviso-final.sobra .print-aviso-final-titulo { color: #7a4a00; }
+  .print-aviso-final-detalhe { font-size: 11px; color: var(--cinza-escuro); font-weight: 600; }
   @media (max-width: 600px) { header { flex-direction: column; gap: 8px; align-items: flex-start; } input.qty { width: 55px; } }
 </style>
 </head>
@@ -123,8 +155,13 @@ const SUPABASE_URL = 'https://cagorqpetzsgmttkvlcm.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_N3Y-dergVFNGpb-qZWjDHQ_46YHsdb4';
 const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
 let produtos = [], dataSel = '';
-let dadosColab = {}, saidasPrincipais = {};
+let dadosColab = {};          // por produto: { inicial, quebra, final }  (final = estoque físico contado, null se ainda não contado)
+let saidasPrincipais = {};    // por produto: saída puxada do Planner (travada)
+let entradaTotal = 0;         // total único de entradas do dia (não é mais por produto)
+let carimboCarregado = null;      // detecta conflito na tabela estoque_colaborador
+let carimboGeralCarregado = null; // detecta conflito na tabela estoque_colaborador_geral
 
 window.addEventListener('DOMContentLoaded', async () => {
   const hoje = new Date().toISOString().split('T')[0];
@@ -138,148 +175,390 @@ function irParaHoje() { const h = new Date().toISOString().split('T')[0]; docume
 function formatarData(d) { const [a,m,dia] = d.split('-'); return `${dia}/${m}/${a}`; }
 function formatarHora() { return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 
+function somarDias(dataStr, dias) {
+  const [ano, mes, dia] = dataStr.split('-').map(Number);
+  const d = new Date(Date.UTC(ano, mes - 1, dia));
+  d.setUTCDate(d.getUTCDate() + dias);
+  return d.toISOString().split('T')[0];
+}
+function proximoDia(dataStr) { return somarDias(dataStr, 1); }
+function diaAnterior(dataStr) { return somarDias(dataStr, -1); }
+
+function obterUltimoCarimbo(rows) {
+  if (!rows || rows.length === 0) return null;
+  return rows.reduce((max, r) => (!max || (r.atualizado_em && r.atualizado_em > max)) ? r.atualizado_em : max, null);
+}
+
 async function carregarTudo() {
   const { data: prods } = await db.from('produtos').select('*').eq('ativo', true).order('ordem');
   produtos = prods || [];
   dadosColab = {};
-  produtos.forEach(p => dadosColab[p.id] = { inicial: 0, entrada: 0, quebra: 0 });
+  produtos.forEach(p => dadosColab[p.id] = { inicial: 0, quebra: 0, final: 0 });
   saidasPrincipais = {};
   produtos.forEach(p => saidasPrincipais[p.id] = 0);
+
   const { data: saiData } = await db.from('saidas').select('produto_id, quantidade').eq('data', dataSel);
   (saiData || []).forEach(r => { if (saidasPrincipais[r.produto_id] !== undefined) saidasPrincipais[r.produto_id] += r.quantidade || 0; });
+
   const { data: colabData } = await db.from('estoque_colaborador').select('*').eq('data', dataSel);
-  (colabData || []).forEach(r => { if (dadosColab[r.produto_id]) dadosColab[r.produto_id] = { inicial: r.estoque_inicial || 0, entrada: r.entrada || 0, quebra: r.quebra || 0 }; });
+  const jaExisteLancamentoHoje = (colabData || []).length > 0;
+  (colabData || []).forEach(r => { if (dadosColab[r.produto_id]) dadosColab[r.produto_id] = { inicial: r.estoque_inicial || 0, quebra: r.quebra || 0, final: r.estoque_final_fisico || 0 }; });
+  carimboCarregado = obterUltimoCarimbo(colabData);
+
+  // Se ainda não existe lançamento salvo para esta data, pré-preenche o Estoque Inicial
+  // com o Estoque Final físico do dia anterior (só precisa digitar na mão a primeira vez)
+  if (!jaExisteLancamentoHoje) {
+    const { data: colabOntem } = await db.from('estoque_colaborador').select('*').eq('data', diaAnterior(dataSel));
+    (colabOntem || []).forEach(r => { if (dadosColab[r.produto_id] && r.estoque_final_fisico) dadosColab[r.produto_id].inicial = r.estoque_final_fisico; });
+  }
+
+  const { data: geralData } = await db.from('estoque_colaborador_geral').select('*').eq('data', dataSel);
+  const geralRow = (geralData || [])[0] || null;
+  entradaTotal = geralRow?.entrada_total || 0;
+  carimboGeralCarregado = geralRow?.atualizado_em || null;
+
   renderizarLancamento();
+}
+
+function calcularResumo() {
+  const totIni = produtos.reduce((s,p) => s + (dadosColab[p.id]?.inicial || 0), 0);
+  const totSai = produtos.reduce((s,p) => s + (saidasPrincipais[p.id] || 0), 0);
+  const totQbr = produtos.reduce((s,p) => s + (dadosColab[p.id]?.quebra || 0), 0);
+  const totFisico = produtos.reduce((s,p) => s + (dadosColab[p.id]?.final || 0), 0);
+  const esperado = totIni + entradaTotal - totSai - totQbr;
+  const diferenca = esperado - totFisico;
+  return { totIni, totSai, totQbr, totFisico, esperado, diferenca };
 }
 
 function renderizarLancamento() {
   const conteudo = document.getElementById('lancamento-conteudo');
-  const totIni = produtos.reduce((s,p) => s+(dadosColab[p.id]?.inicial||0), 0);
-  const totEnt = produtos.reduce((s,p) => s+(dadosColab[p.id]?.entrada||0), 0);
-  const totSai = produtos.reduce((s,p) => s+(saidasPrincipais[p.id]||0), 0);
-  const totQbr = produtos.reduce((s,p) => s+(dadosColab[p.id]?.quebra||0), 0);
-  const totFin = totIni + totEnt - totSai - totQbr;
-  const corTF = totFin < 0 ? 'var(--vermelho)' : totFin === 0 ? 'var(--laranja)' : 'var(--azul)';
+  const r = calcularResumo();
 
-  let html = `<div class="cards-resumo">
-    <div class="card-resumo"><div class="valor">${totIni}</div><div class="label">Est. Inicial</div></div>
-    <div class="card-resumo"><div class="valor">${totEnt}</div><div class="label">Entradas</div></div>
-    <div class="card-resumo laranja"><div class="valor">${totSai}</div><div class="label">Saídas 🔒</div></div>
-    <div class="card-resumo vermelho"><div class="valor">${totQbr}</div><div class="label">Quebras</div></div>
-    <div class="card-resumo azul"><div class="valor">${totFin}</div><div class="label">Est. Final</div></div>
+  let html = `<div class="aviso-sync">🔄 Ao salvar, o Estoque Final físico de cada item vira o Estoque Inicial de amanhã no Planner Morango</div>
+
+  <div class="entrada-total-card">
+    <label>📥 Total de Entradas do dia (todos os produtos somados)</label>
+    <input type="number" min="0" id="entradaTotalInput" value="${entradaTotal}" oninput="atualizarEntradaTotal(this)" onfocus="this.select()">
   </div>
-  <div class="aviso-readonly">🔒 Saídas preenchidas pelo gestor — não editável</div>
+
+  <div id="conferencia-card"></div>
+
+  <div class="aviso-readonly">🔒 Saídas puxadas automaticamente do Planner — não editável</div>
   <div class="tabela-container">
     <div class="tabela-titulo verde">📋 Lançamento — ${formatarData(dataSel)}</div>
     <table><thead><tr>
-      <th>Produto</th><th>Est. Inicial</th><th>+ Entradas</th><th>− Saídas 🔒</th><th>− Quebras</th><th>= Final</th>
+      <th>Produto</th><th>Est. Inicial</th><th>Saída 🔒</th><th>Quebra</th><th>Est. Final físico</th>
     </tr></thead><tbody>`;
 
   produtos.forEach(p => {
-    const d = dadosColab[p.id] || { inicial:0, entrada:0, quebra:0 };
+    const d = dadosColab[p.id] || { inicial:0, quebra:0, final:null };
     const sai = saidasPrincipais[p.id] || 0;
-    const fin = d.inicial + d.entrada - sai - d.quebra;
-    const cor = fin < 0 ? 'var(--vermelho)' : fin === 0 ? 'var(--laranja)' : 'var(--verde)';
     html += `<tr>
       <td>${p.nome}</td>
       <td><input type="number" class="qty" min="0" value="${d.inicial}" data-prod="${p.id}" data-campo="inicial" oninput="atualizarColab(this)" onfocus="this.select()"></td>
-      <td><input type="number" class="qty" min="0" value="${d.entrada}" data-prod="${p.id}" data-campo="entrada" oninput="atualizarColab(this)" onfocus="this.select()"></td>
       <td><input type="number" class="qty" value="${sai}" readonly></td>
       <td><input type="number" class="qty" min="0" value="${d.quebra}" data-prod="${p.id}" data-campo="quebra" oninput="atualizarColab(this)" onfocus="this.select()" style="border-color:var(--vermelho)"></td>
-      <td id="final-${p.id}" style="color:${cor};font-weight:800;font-size:14px">${fin>0?'+':''}${fin}</td>
+      <td><input type="number" class="qty fisico" min="0" value="${d.final || 0}" data-prod="${p.id}" data-campo="final" oninput="atualizarColab(this)" onfocus="this.select()"></td>
     </tr>`;
   });
 
   html += `<tr class="total-row">
     <td>TOTAL</td>
-    <td id="tot-inicial">${totIni}</td>
-    <td id="tot-entrada">${totEnt}</td>
-    <td style="color:var(--laranja)">${totSai}</td>
-    <td id="tot-quebra" style="color:var(--vermelho)">${totQbr}</td>
-    <td id="tot-final" style="color:${corTF}">${totFin>0?'+':''}${totFin}</td>
+    <td id="tot-inicial">${r.totIni}</td>
+    <td style="color:var(--laranja)">${r.totSai}</td>
+    <td id="tot-quebra" style="color:var(--vermelho)">${r.totQbr}</td>
+    <td id="tot-fisico" style="color:var(--azul)">${r.totFisico}</td>
   </tr></tbody></table></div>
   <button class="btn-salvar" onclick="salvarColab()">💾 Salvar Lançamento</button>`;
 
   conteudo.innerHTML = html;
+  renderizarConferencia(r);
+}
+
+function renderizarConferencia(r) {
+  const el = document.getElementById('conferencia-card');
+  if (!el) return;
+  let classe, titulo;
+  if (r.diferenca === 0) {
+    classe = 'ok';
+    titulo = '✅ Estoque batendo — contagem física confere com o esperado';
+  } else if (r.diferenca > 0) {
+    classe = 'erro';
+    titulo = `❌ Está faltando ${r.diferenca} unidade(s) no total (esperado maior que o físico contado)`;
+  } else {
+    classe = 'erro';
+    titulo = `⚠️ Está sobrando ${Math.abs(r.diferenca)} unidade(s) no total (físico contado maior que o esperado)`;
+  }
+  el.innerHTML = `<div class="conferencia-card ${classe}">
+    <div class="conferencia-titulo">${titulo}</div>
+    <div class="conferencia-linhas">
+      <div>Inicial<b>${r.totIni}</b></div>
+      <div>+ Entradas<b>${entradaTotal}</b></div>
+      <div>− Saídas<b>${r.totSai}</b></div>
+      <div>− Quebras<b>${r.totQbr}</b></div>
+      <div>= Esperado<b>${r.esperado}</b></div>
+      <div>Físico contado<b>${r.totFisico}</b></div>
+    </div>
+  </div>`;
+}
+
+function atualizarEntradaTotal(input) {
+  entradaTotal = parseInt(input.value) || 0;
+  input.classList.add('editado');
+  atualizarTotaisETela();
 }
 
 function atualizarColab(input) {
   const pid = input.dataset.prod, campo = input.dataset.campo;
-  if (!dadosColab[pid]) dadosColab[pid] = { inicial:0, entrada:0, quebra:0 };
+  if (!dadosColab[pid]) dadosColab[pid] = { inicial:0, quebra:0, final:0 };
   dadosColab[pid][campo] = parseInt(input.value) || 0;
   input.classList.add('editado');
-  const d = dadosColab[pid], sai = saidasPrincipais[pid] || 0;
-  const fin = d.inicial + d.entrada - sai - d.quebra;
-  const el = document.getElementById(`final-${pid}`);
-  if (el) { el.textContent = (fin>0?'+':'')+fin; el.style.color = fin<0?'var(--vermelho)':fin===0?'var(--laranja)':'var(--verde)'; }
-  const totIni = produtos.reduce((s,p)=>s+(dadosColab[p.id]?.inicial||0),0);
-  const totEnt = produtos.reduce((s,p)=>s+(dadosColab[p.id]?.entrada||0),0);
-  const totSai = produtos.reduce((s,p)=>s+(saidasPrincipais[p.id]||0),0);
-  const totQbr = produtos.reduce((s,p)=>s+(dadosColab[p.id]?.quebra||0),0);
-  const totFin = totIni+totEnt-totSai-totQbr;
-  const corTF = totFin<0?'var(--vermelho)':totFin===0?'var(--laranja)':'var(--azul)';
+  atualizarTotaisETela();
+}
+
+function atualizarTotaisETela() {
+  const r = calcularResumo();
   const s=(id,v,c)=>{const e=document.getElementById(id);if(e){e.textContent=v;if(c)e.style.color=c;}};
-  s('tot-inicial',totIni); s('tot-entrada',totEnt); s('tot-quebra',totQbr,'var(--vermelho)'); s('tot-final',(totFin>0?'+':'')+totFin,corTF);
+  s('tot-inicial', r.totIni);
+  s('tot-quebra', r.totQbr, 'var(--vermelho)');
+  s('tot-fisico', r.totFisico, 'var(--azul)');
+  renderizarConferencia(r);
 }
 
 async function salvarColab() {
   const btn = document.querySelector('#secao-lancamento .btn-salvar');
+
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
   try {
+    // 0) Checa se alguém salvou este mesmo dia depois que esta tela foi aberta
+    const { data: atualColab } = await db.from('estoque_colaborador').select('atualizado_em').eq('data', dataSel);
+    const { data: atualGeral } = await db.from('estoque_colaborador_geral').select('atualizado_em').eq('data', dataSel);
+    const carimboColabAtual = obterUltimoCarimbo(atualColab);
+    const carimboGeralAtual = (atualGeral || [])[0]?.atualizado_em || null;
+    if (carimboColabAtual !== carimboCarregado || carimboGeralAtual !== carimboGeralCarregado) {
+      const confirmar = confirm('⚠️ Este lançamento foi alterado por outra pessoa depois que você abriu esta tela.\n\nSe continuar, você vai sobrescrever o que essa pessoa salvou.\n\nClique OK para sobrescrever mesmo assim, ou Cancelar para recarregar os dados mais recentes primeiro.');
+      if (!confirmar) {
+        await carregarTudo();
+        mostrarToast('🔄 Dados recarregados. Confira antes de salvar novamente.', true);
+        btn.disabled = false; btn.textContent = '💾 Salvar Lançamento';
+        return;
+      }
+    }
+
+    // 1) Salva o lançamento por item (inicial, quebra, final físico)
     await db.from('estoque_colaborador').delete().eq('data', dataSel);
-    const rows = produtos.map(p => ({ data: dataSel, produto_id: p.id, estoque_inicial: dadosColab[p.id]?.inicial||0, entrada: dadosColab[p.id]?.entrada||0, quebra: dadosColab[p.id]?.quebra||0 }));
+    const rows = produtos.map(p => ({
+      data: dataSel,
+      produto_id: p.id,
+      estoque_inicial: dadosColab[p.id]?.inicial || 0,
+      entrada: 0,
+      quebra: dadosColab[p.id]?.quebra || 0,
+      estoque_final_fisico: dadosColab[p.id]?.final || 0
+    }));
     const { error } = await db.from('estoque_colaborador').insert(rows);
     if (error) throw error;
-    mostrarToast('✅ Lançamento salvo!');
+
+    // 2) Salva o total único de entradas do dia
+    await db.from('estoque_colaborador_geral').delete().eq('data', dataSel);
+    const { error: errGeral } = await db.from('estoque_colaborador_geral').insert([{ data: dataSel, entrada_total: entradaTotal }]);
+    if (errGeral) throw errGeral;
+
+    // 3) Envia o Estoque Final físico de hoje como Estoque Inicial de amanhã no Planner Morango
+    await sincronizarComPlanner();
+
+    const { data: novoAtualColab } = await db.from('estoque_colaborador').select('atualizado_em').eq('data', dataSel);
+    const { data: novoAtualGeral } = await db.from('estoque_colaborador_geral').select('atualizado_em').eq('data', dataSel);
+    carimboCarregado = obterUltimoCarimbo(novoAtualColab);
+    carimboGeralCarregado = (novoAtualGeral || [])[0]?.atualizado_em || null;
+
+    mostrarToast('✅ Lançamento salvo e enviado para o Planner!');
     document.querySelectorAll('input.qty.editado').forEach(i=>i.classList.remove('editado'));
   } catch(e) { mostrarToast('❌ Erro: '+e.message, true); }
   btn.disabled = false; btn.textContent = '💾 Salvar Lançamento';
 }
 
+async function sincronizarComPlanner() {
+  const dataProx = proximoDia(dataSel);
+
+  // Estoque Inicial de amanhã = Estoque Final físico contado hoje
+  const finaisPorProduto = produtos.map(p => ({ produto_id: p.id, final: dadosColab[p.id]?.final || 0 }));
+
+  // Busca o que já existe amanhã em estoque_real para NÃO apagar um estoque_real
+  // (contagem física já confirmada) que porventura já exista para essa data
+  const { data: existentes, error: errBusca } = await db.from('estoque_real').select('*').eq('data', dataProx);
+  if (errBusca) throw errBusca;
+  const existMap = {};
+  (existentes || []).forEach(r => existMap[r.produto_id] = r);
+
+  const rowsProx = finaisPorProduto.map(f => ({
+    data: dataProx,
+    produto_id: f.produto_id,
+    estoque_inicial: f.final,
+    estoque_real: existMap[f.produto_id]?.estoque_real ?? null
+  }));
+
+  const { error: errDelete } = await db.from('estoque_real').delete().eq('data', dataProx);
+  if (errDelete) throw errDelete;
+
+  if (rowsProx.length > 0) {
+    const { error: errInsert } = await db.from('estoque_real').insert(rowsProx);
+    if (errInsert) throw errInsert;
+  }
+}
+
+const CORES_GRAFICO = ['#1C9842','#F39200','#1565c0','#d32f2f','#9c27b0','#00897b','#5d4037','#c0ca33','#8d6e63','#455a64','#e91e63','#3949ab'];
+
 async function carregarResultado() {
   const conteudo = document.getElementById('resultado-conteudo');
   conteudo.innerHTML = '<div class="loading"><div class="spinner"></div>Calculando...</div>';
-  const saldos = produtos.map(p => {
-    const d = dadosColab[p.id] || { inicial:0, entrada:0, quebra:0 };
-    const sai = saidasPrincipais[p.id] || 0;
-    const fin = d.inicial + d.entrada - sai - d.quebra;
-    return { produto: p, inicial: d.inicial||0, entrada: d.entrada||0, sai, quebra: d.quebra||0, fin };
-  });
-  const totalFin = saldos.reduce((s,r)=>s+r.fin, 0);
+  const r = calcularResumo();
 
-  let html = `<button class="btn-print" onclick="mostrarToast('📲 Tire um print desta tela para enviar no WhatsApp!')" style="display:flex">📲 Gerar Print para WhatsApp</button>
+  const linhas = produtos.map(p => {
+    const d = dadosColab[p.id] || { inicial:0, quebra:0, final:0 };
+    const sai = saidasPrincipais[p.id] || 0;
+    const fisico = d.final || 0;
+    return { produto: p, inicial: d.inicial||0, sai, quebra: d.quebra||0, fisico };
+  });
+
+  const conferenciaClasse = r.diferenca === 0 ? 'ok' : 'erro';
+  const conferenciaTexto = r.diferenca === 0 ? '✅ ESTOQUE BATENDO' : (r.diferenca > 0 ? `❌ FALTA ${r.diferenca} UNIDADE(S)` : `⚠️ SOBRA ${Math.abs(r.diferenca)} UNIDADE(S)`);
+
+  let avisoClasse, avisoTitulo, avisoDetalhe;
+  if (r.diferenca === 0) {
+    avisoClasse = 'ok';
+    avisoTitulo = '✅ ESTOQUE CORRETO';
+    avisoDetalhe = 'A contagem física bate exatamente com o esperado. Pode fechar o dia.';
+  } else if (r.diferenca > 0) {
+    avisoClasse = 'falta';
+    avisoTitulo = `❌ ESTOQUE EM FALTA (${r.diferenca} un.)`;
+    avisoDetalhe = 'Faltam produtos em relação ao esperado. Confira quebras não lançadas ou saída não registrada no Planner.';
+  } else {
+    avisoClasse = 'sobra';
+    avisoTitulo = `⚠️ ESTOQUE COM SOBRA (${Math.abs(r.diferenca)} un.)`;
+    avisoDetalhe = 'Tem mais produto físico do que o esperado. Confira se alguma entrada não foi lançada ou se a contagem está correta.';
+  }
+
+  let html = `<button class="btn-print" onclick="gerarImagem()">📲 Gerar Imagem para WhatsApp</button>
   <div id="print-card">
     <div class="print-header">
       <h2>🍓 ESTOQUE FUTURO FRUTAS AP</h2>
       <div class="print-data">📅 ${formatarData(dataSel)}</div>
       <div class="print-hora">⏰ ${formatarHora()}</div>
     </div>
+    <div class="print-conferencia ${conferenciaClasse}">${conferenciaTexto}</div>
     <div class="print-body">`;
 
-  saldos.forEach(r => {
-    const cls = r.fin<0?'negativo':r.fin===0?'zero':'';
-    const cor = r.fin<0?'var(--vermelho)':r.fin===0?'var(--laranja)':'var(--verde)';
-    const status = r.fin>0?'✅ OK':r.fin<0?'❌ FALTA':'➡️ ZERO';
+  linhas.forEach(r2 => {
+    const cls = r2.fisico<0?'negativo':r2.fisico===0?'zero':'';
+    const cor = r2.fisico<0?'var(--vermelho)':r2.fisico===0?'var(--laranja)':'var(--verde)';
     html += `<div class="print-produto ${cls}">
       <div>
-        <div class="print-produto-nome">${r.produto.nome}</div>
-        <div class="print-produto-detalhes">Ini:${r.inicial} +Ent:${r.entrada} -Sai:${r.sai} -Qbr:${r.quebra}</div>
+        <div class="print-produto-nome">${r2.produto.nome}</div>
+        <div class="print-produto-detalhes">Ini:${r2.inicial} -Sai:${r2.sai} -Qbr:${r2.quebra}</div>
       </div>
       <div>
-        <div class="print-produto-saldo">${r.fin>0?'+':''}${r.fin}</div>
-        <div class="print-status" style="color:${cor}">${status}</div>
+        <div class="print-produto-saldo">${r2.fisico}</div>
+        <div class="print-status" style="color:${cor}">FÍSICO</div>
       </div>
     </div>`;
   });
 
   html += `<div class="print-total">
-    <div class="print-total-label">TOTAL GERAL</div>
-    <div class="print-total-valor">${totalFin>0?'+':''}${totalFin}</div>
+    <div class="print-total-label">TOTAL FÍSICO</div>
+    <div class="print-total-valor">${r.totFisico}</div>
   </div></div>
-  <div class="print-footer">AP Frutas & Verduras • ${formatarData(dataSel)}</div>
+
+  <div class="print-grafico-secao">
+    <div class="print-grafico-titulo">📊 Proporção do Estoque Final por Produto</div>
+    <canvas id="grafico-pizza" width="220" height="220"></canvas>
+    <div class="print-legenda" id="legenda-pizza"></div>
+  </div>
+
+  <div class="print-aviso-final ${avisoClasse}">
+    <div class="print-aviso-final-titulo">${avisoTitulo}</div>
+    <div class="print-aviso-final-detalhe">${avisoDetalhe}</div>
+  </div>
+
+  <div class="print-footer">AP Frutas & Verduras • ${formatarData(dataSel)} • Entradas do dia: ${entradaTotal}</div>
   </div>`;
 
   conteudo.innerHTML = html;
+  desenharGraficoPizza(linhas);
+}
+
+function desenharGraficoPizza(linhas) {
+  const canvas = document.getElementById('grafico-pizza');
+  const legenda = document.getElementById('legenda-pizza');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const positivos = linhas.filter(r => r.fisico > 0);
+  const total = positivos.reduce((s, r) => s + r.fisico, 0);
+  const cx = W / 2, cy = H / 2, raio = Math.min(W, H) / 2 - 4;
+
+  if (total === 0) {
+    ctx.fillStyle = '#999';
+    ctx.font = '13px Segoe UI';
+    ctx.textAlign = 'center';
+    ctx.fillText('Sem estoque físico para exibir', cx, cy);
+    if (legenda) legenda.innerHTML = '';
+    return;
+  }
+
+  let anguloInicial = -Math.PI / 2;
+  let legendaHtml = '';
+  positivos.forEach((r, i) => {
+    const fatia = (r.fisico / total) * Math.PI * 2;
+    const cor = CORES_GRAFICO[i % CORES_GRAFICO.length];
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, raio, anguloInicial, anguloInicial + fatia);
+    ctx.closePath();
+    ctx.fillStyle = cor;
+    ctx.fill();
+    anguloInicial += fatia;
+
+    const pct = ((r.fisico / total) * 100).toFixed(1);
+    legendaHtml += `<div class="print-legenda-item"><span class="print-legenda-cor" style="background:${cor}"></span>${r.produto.nome} — ${pct}%</div>`;
+  });
+
+  if (legenda) legenda.innerHTML = legendaHtml;
+}
+
+async function gerarImagem() {
+  const btn = document.querySelector('#secao-resultado .btn-print');
+  if (!btn) return;
+  const textoOriginal = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Gerando imagem...';
+  try {
+    const canvas = await html2canvas(document.getElementById('print-card'), { backgroundColor: '#ffffff', scale: 2 });
+    canvas.toBlob(async (blob) => {
+      if (!blob) { mostrarToast('❌ Erro ao gerar imagem.', true); btn.disabled = false; btn.textContent = textoOriginal; return; }
+      const arquivo = new File([blob], `estoque-futuro-${dataSel}.png`, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+        try {
+          await navigator.share({ files: [arquivo], title: 'Estoque Futuro AP Frutas', text: `Estoque Futuro — ${formatarData(dataSel)}` });
+          mostrarToast('✅ Imagem pronta para envio!');
+        } catch (e) {
+          // usuário cancelou o compartilhamento — não é erro
+        }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `estoque-futuro-${dataSel}.png`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        mostrarToast('📥 Imagem baixada! Agora é só enviar no grupo do WhatsApp.');
+      }
+      btn.disabled = false; btn.textContent = textoOriginal;
+    }, 'image/png');
+  } catch (e) {
+    mostrarToast('❌ Erro ao gerar imagem: ' + e.message, true);
+    btn.disabled = false; btn.textContent = textoOriginal;
+  }
 }
 
 function mudarAba(aba, el) {
@@ -293,7 +572,7 @@ function mudarAba(aba, el) {
 function mostrarToast(msg, erro=false) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${erro?'erro':''} visivel`;
-  setTimeout(()=>t.classList.remove('visivel'), 3000);
+  setTimeout(()=>t.classList.remove('visivel'), 4000);
 }
 </script>
 </body>
