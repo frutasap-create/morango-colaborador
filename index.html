@@ -214,8 +214,6 @@
 
   .entrada-total-card { background: var(--g-bg); border: 1px solid var(--g-border); border-left: 4px solid var(--g-info); }
   .entrada-total-card label { color: var(--g-ok); }
-  #folNome { width: 210px; padding: 10px; background: var(--g-input); border: 2px solid var(--g-info); border-radius: 8px; text-align: center; font-size: 16px; font-weight: 700; color: var(--g-texto); }
-  #folNome:focus { outline: 2px solid var(--g-accent2); box-shadow: 0 0 0 3px rgba(59,130,246,.25); }
 
   .tabela-container { background: var(--g-bg); border: 1px solid var(--g-border); }
   .tabela-titulo.verde { background: linear-gradient(135deg,#2563eb,#7c3aed); }
@@ -290,6 +288,28 @@
   .fol-add-painel select:focus, .fol-add-painel input:focus { outline: 2px solid var(--g-accent2); box-shadow: 0 0 0 3px rgba(59,130,246,.25); }
   .fol-add-painel .btn-salvar { margin: 0; width: 100%; padding: 12px; }
   .fol-add-nota { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--g-muda); }
+
+  /* Remover item (lixeira) */
+  .fol-item-dir { display: flex; align-items: center; gap: 8px; }
+  .td-nome { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .btn-rem { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 30px; height: 30px; border-radius: 8px; cursor: pointer; background: transparent; color: var(--g-bad); border: 1px solid var(--g-bad-bd); }
+  .btn-rem:hover { background: var(--g-bad-bg); }
+  .btn-rem svg.i { width: 15px; height: 15px; }
+  .td-nome .btn-rem { width: 26px; height: 26px; opacity: .8; }
+
+  /* Tabela de Frutas no celular: células compactas para caber as 5 colunas + lixeira */
+  .tabela-container { overflow-x: auto; }
+  @media (max-width: 600px) {
+    thead th { padding: 8px 3px; font-size: 10px; }
+    tbody td { padding: 6px 3px; }
+    tbody td:first-child, thead th:first-child { padding-left: 8px; }
+    input.qty { width: 50px; padding: 4px 2px; }
+    .td-nome { gap: 4px; font-size: 12px; line-height: 1.2; }
+    .td-nome .btn-rem { width: 24px; height: 24px; }
+    .fol-item input.qty { width: 120px; padding: 8px; }
+  }
+
+  @media (max-width: 380px) { input.qty { width: 44px; font-size: 12px; } .fol-item input.qty { width: 110px; font-size: 16px; } thead th { font-size: 9px; } }
 
   /* Fallbacks */
   @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
@@ -406,6 +426,7 @@ async function carregarTudo() {
   entradaTotal = geralRow?.entrada_total || 0;
   carimboGeralCarregado = geralRow?.atualizado_em || null;
 
+  await carregarInativosFrutas();
   renderizarLancamento();
   if (abaAtiva === 'folhosas') carregarFolhosas();
   if (abaAtiva === 'folresultado') carregarFolhosas().then(renderizarResultadoFolhosas);
@@ -445,7 +466,7 @@ function renderizarLancamento() {
     const d = dadosColab[p.id] || { inicial:0, quebra:0, final:null };
     const sai = saidasPrincipais[p.id] || 0;
     html += `<tr>
-      <td>${p.nome}</td>
+      <td><div class="td-nome"><span>${p.nome}</span><button type="button" class="btn-rem" onclick="frutaRemover('${p.id}')" aria-label="Remover ${esc(p.nome)} da lista" title="Remover item">${ICONES.trash}</button></div></td>
       <td><input type="number" class="qty" min="0" value="${d.inicial}" data-prod="${p.id}" data-campo="inicial" oninput="atualizarColab(this)" onfocus="this.select()"></td>
       <td><input type="number" class="qty" value="${sai}" readonly></td>
       <td><input type="number" class="qty" min="0" value="${d.quebra}" data-prod="${p.id}" data-campo="quebra" oninput="atualizarColab(this)" onfocus="this.select()" style="border-color:var(--vermelho)"></td>
@@ -460,6 +481,7 @@ function renderizarLancamento() {
     <td id="tot-quebra" style="color:var(--vermelho)">${r.totQbr}</td>
     <td id="tot-fisico" style="color:var(--azul)">${r.totFisico}</td>
   </tr></tbody></table></div>
+  ${htmlAddFrutas()}
   <button class="btn-salvar" onclick="salvarColab()">💾 Salvar Lançamento</button>`;
 
   conteudo.innerHTML = html;
@@ -722,20 +744,21 @@ function mostrarToast(msg, erro=false) {
   setTimeout(()=>t.classList.remove('visivel'), 4000);
 }
 /* ============================================================
-   FOLHOSAS — contagem final (Brócolis, Couve-flor, Alface)
-   Lê o saldo do dia do Planner:  Inicial (fol_contagem do dia)
-                                 + Entradas (fol_entrada_real)
-                                 − Vendas (fol_venda_real)
-   e grava a contagem final em fol_contagem do DIA SEGUINTE,
-   que é o Estoque Inicial de amanhã no Planner.
+   FOLHOSAS — contagem de estoque (Brócolis, Couve-flor, Alface)
+   Referência (somente leitura): saldo de ONTEM no Planner
+       = Inicial (fol_contagem de ontem) + Entradas (fol_entrada_real) − Vendas (fol_venda_real)
+   O colaborador conta o que há no estoque agora e, ao salvar, a contagem
+   vira NA HORA o Estoque Inicial de HOJE (fol_contagem da data selecionada).
    ============================================================ */
-const fol = { dataCarregada: null, grupos: [], itens: [], inicial: {}, entrada: {}, venda: {}, existentes: {}, valores: {}, carimbo: null, sujo: false, nome: '', addAberto: false };
-let folReq = 0;
+const fol = { dataCarregada: null, grupos: [], itens: [], inativos: [], inicial: {}, entrada: {}, venda: {}, existentes: {}, valores: {}, carimbo: null, sujo: false, addAberto: false, semRef: true };
+let folReq = 0, frutaAddAberto = false;
+const ENVIADO_POR = 'Colaborador';
 
 // Ícones Lucide inline (sem CDN)
 const ICONES = {
   leaf: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
-  plus: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>'
+  plus: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>',
+  trash: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>'
 };
 
 function alternarTema() {
@@ -752,9 +775,8 @@ function hojeLocal() {
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function fmt(n) { return Number(n).toLocaleString('pt-BR'); }
 function somaPor(lista, fn) { return lista.reduce((s, x) => s + fn(x), 0); }
-function folNomeSalvo() { try { return localStorage.getItem('fol_nome') || ''; } catch (e) { return ''; } }
-function folGuardarNome(v) { fol.nome = v; try { localStorage.setItem('fol_nome', v); } catch (e) {} }
 function folUltimoCarimbo(rows) { return (rows || []).reduce((m, r) => (r.enviado_em && (!m || r.enviado_em > m)) ? r.enviado_em : m, null); }
+function folDivergente(c) { return c.completo && c.diff !== null && c.diff !== 0; }
 
 // Evita perder valores digitados e não salvos ao trocar de data
 function folPodeTrocarData(input) {
@@ -771,29 +793,32 @@ function folPodeTrocarData(input) {
 async function carregarFolhosas() {
   const el = document.getElementById('folhosas-conteudo');
   if (fol.sujo && fol.dataCarregada === dataSel) return; // mantém o que já foi digitado
-  const req = ++folReq, dia = dataSel, prox = proximoDia(dia);
+  const req = ++folReq, dia = dataSel, ref = diaAnterior(dia);
   el.innerHTML = '<div class="loading"><div class="spinner"></div>Buscando saldo do Planner...</div>';
   try {
-    const [g, i, c, e, v, p] = await Promise.all([
+    const [g, i, cr, e, v, p] = await Promise.all([
       db.from('fol_grupos').select('*').eq('ativo', true).order('ordem'),
-      db.from('fol_itens').select('*').eq('ativo', true).order('ordem'),
-      db.from('fol_contagem').select('*').eq('data', dia),
-      db.from('fol_entrada_real').select('item_id, quantidade').eq('data', dia),
-      db.from('fol_venda_real').select('grupo_id, quantidade').eq('data', dia),
-      db.from('fol_contagem').select('*').eq('data', prox)
+      db.from('fol_itens').select('*').order('ordem'),
+      db.from('fol_contagem').select('*').eq('data', ref),
+      db.from('fol_entrada_real').select('item_id, quantidade').eq('data', ref),
+      db.from('fol_venda_real').select('grupo_id, quantidade').eq('data', ref),
+      db.from('fol_contagem').select('*').eq('data', dia)
     ]);
-    for (const r of [g, i, c, e, v, p]) if (r.error) throw r.error;
+    for (const r of [g, i, cr, e, v, p]) if (r.error) throw r.error;
     if (req !== folReq) return; // chegou outra requisição depois (troca de data)
 
     fol.grupos = g.data || [];
     const gids = new Set(fol.grupos.map(x => x.id));
-    fol.itens = (i.data || []).filter(x => gids.has(x.grupo_id));
+    const doGrupo = (i.data || []).filter(x => gids.has(x.grupo_id));
+    fol.itens = doGrupo.filter(x => x.ativo !== false);
+    fol.inativos = doGrupo.filter(x => x.ativo === false);
     const iids = new Set(fol.itens.map(x => x.id));
 
     fol.inicial = {}; fol.entrada = {}; fol.venda = {}; fol.existentes = {};
-    (c.data || []).forEach(r => { if (iids.has(r.item_id)) fol.inicial[r.item_id] = (fol.inicial[r.item_id] || 0) + Number(r.quantidade || 0); });
+    (cr.data || []).forEach(r => { if (iids.has(r.item_id)) fol.inicial[r.item_id] = (fol.inicial[r.item_id] || 0) + Number(r.quantidade || 0); });
     (e.data || []).forEach(r => { if (iids.has(r.item_id)) fol.entrada[r.item_id] = (fol.entrada[r.item_id] || 0) + Number(r.quantidade || 0); });
     (v.data || []).forEach(r => { if (gids.has(r.grupo_id)) fol.venda[r.grupo_id] = (fol.venda[r.grupo_id] || 0) + Number(r.quantidade || 0); });
+    fol.semRef = Object.keys(fol.inicial).length === 0; // sem estoque inicial de ontem não há como calcular o esperado
     (p.data || []).slice().sort((a, b) => String(a.enviado_em).localeCompare(String(b.enviado_em))).forEach(r => {
       if (!fol.existentes[r.item_id]) fol.existentes[r.item_id] = [];
       fol.existentes[r.item_id].push(r);
@@ -806,7 +831,6 @@ async function carregarFolhosas() {
     });
     fol.dataCarregada = dia;
     fol.sujo = false;
-    if (!fol.nome) fol.nome = folNomeSalvo();
     renderizarFolhosas();
   } catch (err) {
     if (req !== folReq) return;
@@ -816,25 +840,37 @@ async function carregarFolhosas() {
   }
 }
 
+// Recarrega do banco sem perder o que o colaborador já digitou (usado ao adicionar/remover item)
+async function folRecarregarPreservando() {
+  const eraSujo = fol.sujo, bkp = Object.assign({}, fol.valores);
+  fol.sujo = false;
+  await carregarFolhosas();
+  if (eraSujo) {
+    Object.keys(bkp).forEach(k => { if (Object.prototype.hasOwnProperty.call(fol.valores, k)) fol.valores[k] = bkp[k]; });
+    fol.sujo = true;
+    renderizarFolhosas();
+  }
+}
+
 function folCalc() {
   return fol.grupos.map(g => {
     const its = fol.itens.filter(i => i.grupo_id === g.id);
     const ini = somaPor(its, i => fol.inicial[i.id] || 0);
     const ent = somaPor(its, i => fol.entrada[i.id] || 0);
     const ven = fol.venda[g.id] || 0;
-    const saldo = ini + ent - ven;
+    const saldo = fol.semRef ? null : ini + ent - ven;
     const preenchidos = its.filter(i => fol.valores[i.id] !== null && fol.valores[i.id] !== undefined).length;
     const completo = its.length > 0 && preenchidos === its.length;
     const contado = somaPor(its, i => fol.valores[i.id] || 0);
-    return { g, its, ini, ent, ven, saldo, preenchidos, completo, contado, diff: completo ? saldo - contado : null };
+    return { g, its, ini, ent, ven, saldo, preenchidos, completo, contado, diff: (completo && saldo !== null) ? saldo - contado : null };
   }).filter(c => c.its.length > 0);
 }
 
 function renderizarFolhosas() {
   const el = document.getElementById('folhosas-conteudo');
-  const prox = proximoDia(dataSel);
+  const ref = diaAnterior(dataSel);
   const calc = folCalc();
-  if (calc.length === 0) {
+  if (calc.length === 0 && fol.inativos.length === 0) {
     el.innerHTML = '<div class="aviso-readonly">Nenhum grupo/item ativo de folhosas encontrado no Planner.</div>';
     return;
   }
@@ -846,34 +882,31 @@ function renderizarFolhosas() {
   if (todosExistentes.length) {
     const ult = todosExistentes.reduce((m, r) => (!m || String(r.enviado_em) > String(m.enviado_em)) ? r : m, null);
     const quando = new Date(ult.enviado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-    avisoExistente = `<div class="aviso-readonly">📌 Já existe contagem para ${formatarData(prox)} (enviada por <b>${esc(ult.enviado_por || '—')}</b> em ${quando}). Os campos abaixo vêm preenchidos com ela — ao salvar, ela será substituída.</div>`;
+    avisoExistente = `<div class="aviso-readonly">📌 Já existe Estoque Inicial de ${formatarData(dataSel)} no Planner (lançado em ${quando}). Os campos vêm preenchidos com ele — ao salvar, ele será substituído.</div>`;
   }
-  const semInicial = Object.keys(fol.inicial).length === 0
-    ? `<div class="aviso-readonly">⚠️ Não há Estoque Inicial lançado no Planner para ${formatarData(dataSel)}. O saldo calculado abaixo considera inicial = 0.</div>` : '';
 
-  let html = `<div class="aviso-sync">🔄 Ao salvar, a contagem final de ${formatarData(dataSel)} vira o <b>Estoque Inicial de ${formatarData(prox)}</b> das folhosas no Planner</div>
-  <div class="entrada-total-card">
-    <label>👤 Quem está lançando?</label>
-    <input type="text" id="folNome" placeholder="Seu nome" maxlength="40" value="${esc(fol.nome)}" oninput="folGuardarNome(this.value)">
-  </div>
-  ${avisoExistente}${semInicial}
+  let html = `<div class="aviso-sync">🔄 Ao salvar, a contagem vira <b>na hora</b> o <b>Estoque Inicial de ${formatarData(dataSel)}</b> das folhosas no Planner. Conferência: saldo de ontem (${formatarData(ref)}).</div>
+  ${avisoExistente}
   <div class="cards-resumo">
-    ${prods.map((p, idx) => `<div class="card-resumo fol-card ${cores[idx % cores.length]}"><div class="top"><span class="ic">${ICONES.leaf}</span><div class="label">Saldo ${esc(p)}</div></div><div class="valor" id="fp-calc-${idx}">0</div><div class="sub" id="fp-cont-${idx}"></div></div>`).join('')}
+    ${prods.map((p, idx) => `<div class="card-resumo fol-card ${cores[idx % cores.length]}"><div class="top"><span class="ic">${ICONES.leaf}</span><div class="label">Esperado ${esc(p)}</div></div><div class="valor" id="fp-calc-${idx}">0</div><div class="sub" id="fp-cont-${idx}"></div></div>`).join('')}
   </div>
   <div id="fol-conferencia"></div>
-  <div class="aviso-readonly">🔒 O saldo do dia vem do Planner (inicial + entradas − vendas) e não é editável. Digite o que você <b>contou</b> no estoque, item por item.</div>`;
+  <div class="aviso-readonly">🔒 O esperado vem do Planner (saldo de ontem: inicial + entradas − vendas) e não é editável. Conte o que há no estoque <b>agora</b>, item por item.</div>`;
 
   calc.forEach(c => {
     html += `<div class="fol-grupo">
       <div class="fol-grupo-topo">
         <div class="fol-grupo-nome">${esc(c.g.nome)}</div>
-        <div class="fol-saldo"><span>Saldo do dia</span><b class="${c.saldo < 0 ? 'neg' : ''}">${fmt(c.saldo)}</b></div>
+        <div class="fol-saldo"><span>Esperado (ontem)</span><b class="${c.saldo !== null && c.saldo < 0 ? 'neg' : ''}">${c.saldo === null ? '—' : fmt(c.saldo)}</b></div>
       </div>
-      <div class="fol-formula">Inicial ${fmt(c.ini)} + Entradas ${fmt(c.ent)} − Vendas ${fmt(c.ven)}</div>
+      <div class="fol-formula">${fol.semRef ? 'Sem estoque de ontem no Planner' : `Ontem: inicial ${fmt(c.ini)} + entradas ${fmt(c.ent)} − vendas ${fmt(c.ven)}`}</div>
       ${c.its.map(i => {
         const val = fol.valores[i.id];
-        return `<label class="fol-item"><span>${esc(i.rotulo)}</span>
-          <input type="number" inputmode="numeric" class="qty fisico" min="0" step="1" placeholder="contar" value="${val === null || val === undefined ? '' : val}" data-item="${i.id}" oninput="folDigitou(this)" onfocus="this.select()"></label>`;
+        return `<div class="fol-item"><span>${esc(i.rotulo)}</span>
+          <div class="fol-item-dir">
+            <input type="number" inputmode="numeric" class="qty fisico" min="0" step="1" placeholder="contar" value="${val === null || val === undefined ? '' : val}" data-item="${i.id}" oninput="folDigitou(this)" onfocus="this.select()" aria-label="${esc(i.rotulo)}">
+            <button type="button" class="btn-rem" onclick="folRemoverItem('${i.id}')" aria-label="Remover ${esc(i.rotulo)} da lista" title="Remover item">${ICONES.trash}</button>
+          </div></div>`;
       }).join('')}
       <div class="fol-rodape" id="fgr-${c.g.id}"></div>
     </div>`;
@@ -882,10 +915,15 @@ function renderizarFolhosas() {
   html += `<div class="fol-add">
     <button class="fol-add-btn" type="button" onclick="folToggleAdd()">${ICONES.plus} Adicionar item</button>
     <div class="fol-add-painel" id="fol-add-painel" ${fol.addAberto ? '' : 'hidden'}>
-      <label>Grupo<select id="folAddGrupo">${fol.grupos.map(g => `<option value="${g.id}">${esc(g.nome)}</option>`).join('')}</select></label>
-      <label>Nome do item<input type="text" id="folAddNome" maxlength="40" placeholder="Ex.: Granel RJ" onkeydown="if(event.key==='Enter'){folAdicionarItem();}"></label>
-      <div class="fol-add-nota">O item fica cadastrado para todos e passa a aparecer também no Planner.</div>
-      <button class="btn-salvar" type="button" id="folAddOk" onclick="folAdicionarItem()">Adicionar item ao grupo</button>
+      ${fol.inativos.length ? `<label>Nome do item<select id="folAddSel">${fol.inativos.map(i => {
+        // só o nome do item; o grupo aparece apenas se houver dois itens com o mesmo nome
+        const repetido = fol.inativos.some(o => o.id !== i.id && String(o.rotulo).toLowerCase() === String(i.rotulo).toLowerCase());
+        const g = repetido ? fol.grupos.find(x => x.id === i.grupo_id) : null;
+        return `<option value="${i.id}">${esc(i.rotulo)}${g ? ' (' + esc(g.nome) + ')' : ''}</option>`;
+      }).join('')}</select></label>
+      <div class="fol-add-nota">O item volta para a lista aqui e no Planner.</div>
+      <button class="btn-salvar" type="button" id="folAddOk" onclick="folAdicionarItem()">Adicionar item à lista</button>`
+      : '<div class="fol-add-nota">Não há itens removidos para adicionar.</div>'}
     </div>
   </div>
   <button class="btn-salvar" id="folBtnSalvar" onclick="salvarFolhosas()">💾 Salvar contagem das folhosas</button>`;
@@ -896,37 +934,36 @@ function renderizarFolhosas() {
 function folToggleAdd() {
   fol.addAberto = !fol.addAberto;
   const p = document.getElementById('fol-add-painel');
-  if (!p) return;
-  p.hidden = !fol.addAberto;
-  if (fol.addAberto) { const n = document.getElementById('folAddNome'); if (n) n.focus(); }
+  if (p) p.hidden = !fol.addAberto;
+}
+
+async function folRemoverItem(id) {
+  const it = fol.itens.find(i => i.id === id);
+  if (!it) return;
+  if (!confirm(`Remover "${it.rotulo}" da lista?\n\nEle sai daqui e do Planner (item desativado no cadastro). Dá para adicionar de volta em "Adicionar item".`)) return;
+  try {
+    const { error } = await db.from('fol_itens').update({ ativo: false }).eq('id', id);
+    if (error) throw error;
+    await folRecarregarPreservando();
+    mostrarToast('✅ "' + it.rotulo + '" removido da lista.');
+  } catch (e) { mostrarToast('❌ Erro ao remover: ' + (e && e.message ? e.message : e), true); }
 }
 
 async function folAdicionarItem() {
-  const gid = (document.getElementById('folAddGrupo') || {}).value;
-  const campo = document.getElementById('folAddNome');
-  const rotulo = ((campo && campo.value) || '').trim().replace(/\s+/g, ' ');
-  if (!gid) { mostrarToast('❌ Escolha o grupo do item.', true); return; }
-  if (rotulo.length < 2) { mostrarToast('❌ Digite o nome do item (mínimo 2 letras).', true); if (campo) campo.focus(); return; }
-  if (fol.itens.some(i => i.grupo_id === gid && String(i.rotulo).toLowerCase() === rotulo.toLowerCase())) {
-    mostrarToast('❌ Esse item já existe nesse grupo.', true); if (campo) campo.focus(); return;
-  }
+  const sel = document.getElementById('folAddSel');
+  if (!sel || !sel.value) { mostrarToast('❌ Escolha o item que quer adicionar.', true); return; }
+  const it = fol.inativos.find(i => i.id === sel.value);
   const btn = document.getElementById('folAddOk');
   btn.disabled = true; btn.textContent = '⏳ Adicionando...';
   try {
-    const ordem = Math.max(0, ...fol.itens.map(i => Number(i.ordem) || 0)) + 1;
-    const { data, error } = await db.from('fol_itens').insert([{ grupo_id: gid, rotulo, ordem }]).select();
+    const { error } = await db.from('fol_itens').update({ ativo: true }).eq('id', sel.value);
     if (error) throw error;
-    const novo = (data || [])[0];
-    if (!novo) throw new Error('O item não foi criado. Tente de novo.');
-    fol.itens.push(novo);
-    fol.itens.sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
-    fol.valores[novo.id] = null;
     fol.addAberto = false;
-    renderizarFolhosas(); // mantém o que já foi digitado (fica em fol.valores)
-    mostrarToast('✅ Item "' + rotulo + '" adicionado. Agora é só contar.');
+    await folRecarregarPreservando();
+    mostrarToast('✅ "' + (it ? it.rotulo : 'Item') + '" adicionado. Agora é só contar.');
   } catch (e) {
     mostrarToast('❌ Erro ao adicionar: ' + (e && e.message ? e.message : e), true);
-    btn.disabled = false; btn.textContent = 'Adicionar item ao grupo';
+    btn.disabled = false; btn.textContent = 'Adicionar item à lista';
   }
 }
 
@@ -950,9 +987,10 @@ function folAtualizar() {
     if (!r) return;
     let cls = '', txt;
     if (!c.completo) txt = `Contado até agora: ${fmt(c.contado)} · faltam ${c.its.length - c.preenchidos} item(ns)`;
+    else if (c.diff === null) { cls = 'ok'; txt = `✔ Contado ${fmt(c.contado)}`; }
     else if (c.diff === 0) { cls = 'ok'; txt = `✅ Confere — contado ${fmt(c.contado)}`; }
-    else if (c.diff > 0) { cls = 'falta'; txt = `❌ Falta ${fmt(c.diff)} un. (saldo ${fmt(c.saldo)} · contado ${fmt(c.contado)})`; }
-    else { cls = 'sobra'; txt = `⚠️ Sobra ${fmt(-c.diff)} un. (saldo ${fmt(c.saldo)} · contado ${fmt(c.contado)})`; }
+    else if (c.diff > 0) { cls = 'falta'; txt = `❌ Falta ${fmt(c.diff)} un. (esperado ${fmt(c.saldo)} · contado ${fmt(c.contado)})`; }
+    else { cls = 'sobra'; txt = `⚠️ Sobra ${fmt(-c.diff)} un. (esperado ${fmt(c.saldo)} · contado ${fmt(c.contado)})`; }
     r.className = 'fol-rodape ' + cls;
     r.textContent = txt;
   });
@@ -961,32 +999,29 @@ function folAtualizar() {
   prods.forEach((p, idx) => {
     const cs = calc.filter(c => c.g.produto === p);
     const a = document.getElementById('fp-calc-' + idx), b = document.getElementById('fp-cont-' + idx);
-    if (a) a.textContent = fmt(somaPor(cs, c => c.saldo));
+    if (a) a.textContent = fol.semRef ? '—' : fmt(somaPor(cs, c => c.saldo));
     if (b) b.textContent = 'Contado: ' + fmt(somaPor(cs, c => c.contado));
   });
 
   const conf = document.getElementById('fol-conferencia');
   if (!conf) return;
-  const totSaldo = somaPor(calc, c => c.saldo), totCont = somaPor(calc, c => c.contado);
+  const totSaldo = fol.semRef ? null : somaPor(calc, c => c.saldo), totCont = somaPor(calc, c => c.contado);
   const pend = somaPor(calc, c => c.its.length - c.preenchidos);
-  const divergentes = calc.filter(c => c.completo && c.diff !== 0);
+  const divergentes = calc.filter(folDivergente);
   let cls, titulo;
   if (pend > 0) { cls = 'pendente'; titulo = `✏️ Faltam ${pend} item(ns) para contar`; }
-  else if (divergentes.length === 0) { cls = 'ok'; titulo = '✅ Estoque batendo — a contagem confere com o saldo em todos os grupos'; }
-  else { cls = 'erro'; titulo = `❌ ${divergentes.length} grupo(s) com diferença entre saldo e contagem`; }
+  else if (fol.semRef) { cls = 'pendente'; titulo = 'ℹ️ Não há estoque de ontem no Planner — não dá para conferir. A contagem pode ser salva normalmente.'; }
+  else if (divergentes.length === 0) { cls = 'ok'; titulo = '✅ Estoque batendo — a contagem confere com o esperado em todos os grupos'; }
+  else { cls = 'erro'; titulo = `❌ ${divergentes.length} grupo(s) com diferença entre o esperado e a contagem`; }
   const linhas = divergentes.map(c => `<div>${esc(c.g.nome)}<b>${c.diff > 0 ? 'falta ' : 'sobra '}${fmt(Math.abs(c.diff))}</b></div>`).join('');
   conf.innerHTML = `<div class="conferencia-card ${cls}">
     <div class="conferencia-titulo">${titulo}</div>
-    <div class="conferencia-linhas"><div>Saldo calculado<b>${fmt(totSaldo)}</b></div><div>Contado<b>${fmt(totCont)}</b></div>${linhas}</div>
+    <div class="conferencia-linhas"><div>Esperado (ontem)<b>${totSaldo === null ? '—' : fmt(totSaldo)}</b></div><div>Contado<b>${fmt(totCont)}</b></div>${linhas}</div>
   </div>`;
 }
 
 async function salvarFolhosas() {
   const btn = document.getElementById('folBtnSalvar');
-  const campoNome = document.getElementById('folNome');
-  const nome = (campoNome.value || '').trim();
-  if (!nome) { mostrarToast('❌ Digite seu nome antes de salvar.', true); campoNome.focus(); return; }
-
   const faltando = fol.itens.filter(i => fol.valores[i.id] === null || fol.valores[i.id] === undefined);
   if (faltando.length) {
     const ids = new Set(faltando.map(i => i.id));
@@ -999,19 +1034,19 @@ async function salvarFolhosas() {
     return;
   }
 
-  const divergentes = folCalc().filter(c => c.completo && c.diff !== 0);
-  if (divergentes.length && !confirm(`Há diferença entre o saldo e a contagem em ${divergentes.length} grupo(s):\n\n` +
+  const divergentes = folCalc().filter(folDivergente);
+  if (divergentes.length && !confirm(`Há diferença entre o esperado (saldo de ontem) e a contagem em ${divergentes.length} grupo(s):\n\n` +
       divergentes.map(c => `• ${c.g.nome}: ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}`).join('\n') +
       '\n\nSalvar mesmo assim?')) return;
 
-  const dia = dataSel, prox = proximoDia(dia);
+  const dia = dataSel;
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
   try {
-    // Relê o que existe agora em D+1: detecta alteração de outra pessoa e evita duplicar linhas
-    const { data: atuais, error: errA } = await db.from('fol_contagem').select('*').eq('data', prox);
+    // Relê o que existe agora em D: detecta alteração de outra pessoa e evita duplicar linhas
+    const { data: atuais, error: errA } = await db.from('fol_contagem').select('*').eq('data', dia);
     if (errA) throw errA;
     if (folUltimoCarimbo(atuais) !== fol.carimbo) {
-      if (!confirm('⚠️ A contagem de ' + formatarData(prox) + ' foi alterada por outra pessoa depois que você abriu esta tela.\n\nOK = sobrescrever mesmo assim\nCancelar = recarregar os dados mais recentes')) {
+      if (!confirm('⚠️ O Estoque Inicial de ' + formatarData(dia) + ' foi alterado por outra pessoa depois que você abriu esta tela.\n\nOK = sobrescrever mesmo assim\nCancelar = recarregar os dados mais recentes')) {
         fol.sujo = false;
         await carregarFolhosas();
         mostrarToast('🔄 Dados recarregados. Confira antes de salvar novamente.', true);
@@ -1028,13 +1063,13 @@ async function salvarFolhosas() {
     const agora = new Date().toISOString();
     const inserir = [], operacoes = [], duplicadas = [];
     fol.itens.forEach(it => {
-      const dados = { quantidade: fol.valores[it.id], enviado_por: nome, enviado_em: agora };
+      const dados = { quantidade: fol.valores[it.id], enviado_por: ENVIADO_POR, enviado_em: agora };
       const ex = porItem[it.id];
       if (ex && ex.length) {
         operacoes.push(db.from('fol_contagem').update(dados).eq('id', ex[ex.length - 1].id));
         ex.slice(0, -1).forEach(r => duplicadas.push(r.id)); // sobra de linhas repetidas do mesmo item/dia
       } else {
-        inserir.push(Object.assign({ data: prox, item_id: it.id }, dados));
+        inserir.push(Object.assign({ data: dia, item_id: it.id }, dados));
       }
     });
     if (inserir.length) operacoes.push(db.from('fol_contagem').insert(inserir));
@@ -1048,7 +1083,7 @@ async function salvarFolhosas() {
 
     fol.sujo = false;
     await carregarFolhosas();
-    mostrarToast('✅ Contagem salva! Já é o Estoque Inicial de ' + formatarData(prox) + ' no Planner.');
+    mostrarToast('✅ Contagem salva! Já é o Estoque Inicial de ' + formatarData(dia) + ' no Planner.');
   } catch (e) {
     mostrarToast('❌ Erro ao salvar: ' + (e && e.message ? e.message : e), true);
   } finally {
@@ -1069,23 +1104,27 @@ function renderizarResultadoFolhosas() {
     return;
   }
   const pend = somaPor(calc, c => c.its.length - c.preenchidos);
-  const divergentes = calc.filter(c => c.completo && c.diff !== 0);
+  const divergentes = calc.filter(folDivergente);
   const totFisico = somaPor(calc.filter(c => c.completo), c => c.contado);
 
   const confClasse = (pend === 0 && divergentes.length === 0) ? 'ok' : 'erro';
   const confTexto = pend > 0 ? `✏️ CONTAGEM INCOMPLETA — FALTAM ${pend} ITEM(NS)`
-    : divergentes.length === 0 ? '✅ ESTOQUE BATENDO' : `❌ DIFERENÇA EM ${divergentes.length} GRUPO(S)`;
+    : divergentes.length > 0 ? `❌ DIFERENÇA EM ${divergentes.length} GRUPO(S)`
+    : fol.semRef ? '📦 CONTAGEM REGISTRADA' : '✅ ESTOQUE BATENDO';
 
   let avisoClasse, avisoTitulo, avisoDetalhe;
   if (pend > 0) {
     avisoClasse = 'sobra'; avisoTitulo = `✏️ CONTAGEM INCOMPLETA (${pend} item(ns))`;
     avisoDetalhe = 'Ainda faltam itens a contar. Volte em Lançamento Folhosas e preencha tudo antes de enviar.';
-  } else if (divergentes.length === 0) {
-    avisoClasse = 'ok'; avisoTitulo = '✅ ESTOQUE CORRETO';
-    avisoDetalhe = 'A contagem física bate com o saldo calculado do Planner em todos os grupos.';
-  } else {
+  } else if (divergentes.length > 0) {
     avisoClasse = 'falta'; avisoTitulo = `❌ DIFERENÇA EM ${divergentes.length} GRUPO(S)`;
     avisoDetalhe = divergentes.map(c => `${esc(c.g.nome)}: ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}`).join(' • ');
+  } else if (fol.semRef) {
+    avisoClasse = 'sobra'; avisoTitulo = 'ℹ️ SEM ESTOQUE DE ONTEM PARA CONFERIR';
+    avisoDetalhe = 'Não há estoque inicial de ontem no Planner, então o esperado não pôde ser calculado.';
+  } else {
+    avisoClasse = 'ok'; avisoTitulo = '✅ ESTOQUE CORRETO';
+    avisoDetalhe = 'A contagem física bate com o esperado (saldo de ontem no Planner) em todos os grupos.';
   }
 
   const naoSalvo = fol.sujo
@@ -1105,15 +1144,15 @@ function renderizarResultadoFolhosas() {
     const cls = c.completo ? '' : 'zero';
     const valor = c.completo ? fmt(c.contado) : '—';
     const pct = (c.completo && c.contado > 0 && totFisico > 0) ? (c.contado / totFisico * 100).toFixed(1).replace('.', ',') + '%' : '—';
+    const esperado = c.saldo === null ? '' : `<div class="print-produto-detalhes">Esperado (ontem): ${fmt(c.saldo)}</div>`;
     const itens = c.its.length > 1
       ? `<div class="print-produto-itens">${c.its.map(i => `${esc(i.rotulo)} ${fol.valores[i.id] == null ? '—' : fmt(fol.valores[i.id])}`).join(' · ')}</div>` : '';
-    const dif = (c.completo && c.diff !== 0)
-      ? `<div class="print-produto-detalhes" style="color:var(--vermelho);font-weight:700">saldo ${fmt(c.saldo)} · ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}</div>` : '';
+    const dif = folDivergente(c)
+      ? `<div class="print-produto-detalhes" style="color:var(--vermelho);font-weight:700">${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}</div>` : '';
     html += `<div class="print-produto ${cls}">
       <div>
         <div class="print-produto-nome">${esc(c.g.nome)}</div>
-        <div class="print-produto-detalhes">Ini:${fmt(c.ini)} +Ent:${fmt(c.ent)} −Sai:${fmt(c.ven)}</div>
-        ${itens}${dif}
+        ${esperado}${itens}${dif}
       </div>
       <div>
         <div class="print-produto-saldo">${valor}</div>
@@ -1135,7 +1174,7 @@ function renderizarResultadoFolhosas() {
       <div class="print-aviso-final-titulo">${avisoTitulo}</div>
       <div class="print-aviso-final-detalhe">${avisoDetalhe}</div>
     </div>
-    <div class="print-footer">AP Frutas & Verduras • ${formatarData(dataSel)} • Contagem: ${esc(fol.nome || '—')}</div>
+    <div class="print-footer">AP Frutas & Verduras • ${formatarData(dataSel)} • Estoque inicial das folhosas</div>
   </div>`;
   el.innerHTML = html;
 }
@@ -1169,6 +1208,75 @@ async function gerarImagemFolhosas() {
   } catch (e) {
     mostrarToast('❌ Erro ao gerar imagem: ' + e.message, true);
     btn.disabled = false; btn.textContent = textoOriginal;
+  }
+}
+
+/* ============================================================
+   FRUTAS — adicionar / remover item já cadastrado
+   Remover  = desativa o produto no cadastro (produtos.ativo = false)
+   Adicionar = reativa um produto já cadastrado e removido (só categoria Morango)
+   ============================================================ */
+let frutasInativas = [];
+
+async function carregarInativosFrutas() {
+  const { data, error } = await db.from('produtos').select('*').eq('ativo', false).order('ordem');
+  frutasInativas = error ? [] : (data || []).filter(p => !p.categoria || p.categoria === 'Morango');
+}
+
+function htmlAddFrutas() {
+  return `<div class="fol-add">
+    <button class="fol-add-btn" type="button" onclick="frutaToggleAdd()">${ICONES.plus} Adicionar item</button>
+    <div class="fol-add-painel" id="fruta-add-painel" ${frutaAddAberto ? '' : 'hidden'}>
+      ${frutasInativas.length ? `<label>Nome do item<select id="frutaAddSel">${frutasInativas.map(p => `<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></label>
+      <div class="fol-add-nota">O item volta para a lista aqui e no Planner.</div>
+      <button class="btn-salvar" type="button" id="frutaAddOk" onclick="frutaAdicionar()">Adicionar item à lista</button>`
+      : '<div class="fol-add-nota">Não há itens removidos para adicionar.</div>'}
+    </div>
+  </div>`;
+}
+
+function frutaToggleAdd() {
+  frutaAddAberto = !frutaAddAberto;
+  const p = document.getElementById('fruta-add-painel');
+  if (p) p.hidden = !frutaAddAberto;
+}
+
+// Recarrega do banco sem perder o que já foi digitado na tela
+async function frutasRecarregarPreservando() {
+  const bkp = JSON.parse(JSON.stringify(dadosColab)), ent = entradaTotal;
+  await carregarTudo();
+  Object.keys(bkp).forEach(k => { if (dadosColab[k]) dadosColab[k] = bkp[k]; });
+  entradaTotal = ent;
+  renderizarLancamento();
+}
+
+async function frutaRemover(id) {
+  const p = produtos.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`Remover "${p.nome}" da lista?\n\nEle sai daqui e do Planner (item desativado no cadastro). Dá para adicionar de volta em "Adicionar item".`)) return;
+  try {
+    const { error } = await db.from('produtos').update({ ativo: false }).eq('id', id);
+    if (error) throw error;
+    await frutasRecarregarPreservando();
+    mostrarToast('✅ "' + p.nome + '" removido da lista.');
+  } catch (e) { mostrarToast('❌ Erro ao remover: ' + (e && e.message ? e.message : e), true); }
+}
+
+async function frutaAdicionar() {
+  const sel = document.getElementById('frutaAddSel');
+  if (!sel || !sel.value) { mostrarToast('❌ Escolha o item que quer adicionar.', true); return; }
+  const p = frutasInativas.find(x => x.id === sel.value);
+  const btn = document.getElementById('frutaAddOk');
+  btn.disabled = true; btn.textContent = '⏳ Adicionando...';
+  try {
+    const { error } = await db.from('produtos').update({ ativo: true }).eq('id', sel.value);
+    if (error) throw error;
+    frutaAddAberto = false;
+    await frutasRecarregarPreservando();
+    mostrarToast('✅ "' + (p ? p.nome : 'Item') + '" adicionado à lista.');
+  } catch (e) {
+    mostrarToast('❌ Erro ao adicionar: ' + (e && e.message ? e.message : e), true);
+    btn.disabled = false; btn.textContent = 'Adicionar item à lista';
   }
 }
 </script>
