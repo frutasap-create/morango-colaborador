@@ -120,22 +120,208 @@
   .print-aviso-final.sobra .print-aviso-final-titulo { color: #7a4a00; }
   .print-aviso-final-detalhe { font-size: 11px; color: var(--cinza-escuro); font-weight: 600; }
   @media (max-width: 600px) { header { flex-direction: column; gap: 8px; align-items: flex-start; } input.qty { width: 55px; } }
+
+  /* ===================== VISUAL TECH (glass) — bloco único, fácil de remover ===================== */
+  :root {
+    color-scheme: light;
+    --g-fundo: radial-gradient(620px circle at 6% -4%, rgba(59,130,246,.34), transparent 62%),
+      radial-gradient(560px circle at 100% 10%, rgba(139,92,246,.26), transparent 62%),
+      radial-gradient(640px circle at 85% 105%, rgba(34,211,238,.28), transparent 62%),
+      linear-gradient(160deg,#eaf1ff 0%,#f3f0ff 55%,#eafbff 100%);
+    --g-blur: blur(14px) saturate(140%);
+    --g-bg: rgba(255,255,255,.62); --g-bg-forte: rgba(255,255,255,.82); --g-border: rgba(255,255,255,.90);
+    --g-shadow: 0 8px 30px rgba(37,99,235,.14), inset 0 1px 0 rgba(255,255,255,.95);
+    --g-input: rgba(255,255,255,.80); --g-input-borda: rgba(37,99,235,.28);
+    --g-thead: rgba(219,230,252,.70); --g-header: rgba(255,255,255,.58); --g-tabs: rgba(255,255,255,.50);
+    --g-linha: rgba(37,99,235,.14); --g-hover: rgba(59,130,246,.10);
+    --g-texto: #13213f; --g-muda: #5a6a8c; --g-lista: #ffffff; --g-radius: 16px;
+    --g-accent: #1d4ed8; --g-accent2: #06b6d4;
+    --g-titulo: linear-gradient(90deg,#1d4ed8,#7c3aed);
+    --g-ok: #15803d; --g-warn: #d97706; --g-warn-t: #9a3412; --g-bad: #dc2626; --g-info: #1d4ed8;
+    --g-ok-bg: rgba(34,197,94,.14); --g-ok-bd: rgba(34,197,94,.45);
+    --g-warn-bg: rgba(249,115,22,.14); --g-warn-bd: rgba(249,115,22,.45);
+    --g-bad-bg: rgba(239,68,68,.14); --g-bad-bd: rgba(239,68,68,.45);
+    --g-info-bg: rgba(59,130,246,.14);
+    --g-toast: rgba(19,33,63,.94);
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --g-fundo: radial-gradient(620px circle at 8% -4%, rgba(59,130,246,.50), transparent 62%),
+      radial-gradient(560px circle at 100% 8%, rgba(139,92,246,.40), transparent 62%),
+      radial-gradient(640px circle at 85% 105%, rgba(34,211,238,.30), transparent 62%),
+      radial-gradient(520px circle at 0% 95%, rgba(37,99,235,.28), transparent 62%),
+      linear-gradient(160deg,#0a1736 0%,#060c1f 55%,#02040c 100%);
+    --g-bg: rgba(13,22,48,.55); --g-bg-forte: rgba(22,36,78,.70); --g-border: rgba(96,165,250,.24);
+    --g-shadow: 0 10px 34px rgba(0,0,0,.45), inset 0 1px 0 rgba(147,197,253,.14);
+    --g-input: rgba(8,14,32,.70); --g-input-borda: rgba(96,165,250,.30);
+    --g-thead: rgba(12,22,50,.85); --g-header: rgba(6,12,30,.66); --g-tabs: rgba(6,12,30,.58);
+    --g-linha: rgba(96,165,250,.16); --g-hover: rgba(96,165,250,.10);
+    --g-texto: #e8eefc; --g-muda: #8a9bbd; --g-lista: #0a1128;
+    --g-accent: #22d3ee; --g-accent2: #22d3ee;
+    --g-titulo: linear-gradient(90deg,#ffffff,#9ec5ff,#67e8f9);
+    --g-ok: #34d399; --g-warn: #fb923c; --g-warn-t: #fdba74; --g-bad: #f87171; --g-info: #60a5fa;
+    --g-toast: rgba(10,17,40,.95);
+  }
+  @media (max-width: 768px) { :root { --g-blur: blur(10px) saturate(140%); } }
+
+  body { background: #eaf1ff; color: var(--g-texto); }
+  :root[data-theme="dark"] body { background: #02040c; }
+  .fundo-glass { position: fixed; inset: 0; z-index: 0; pointer-events: none; background: var(--g-fundo); }
+  header, .tabs, main { position: relative; z-index: 1; }
+  header { z-index: 3; }
+
+  /* Cabeçalho */
+  header { background: var(--g-header); color: var(--g-texto); border-bottom: 1px solid var(--g-border); box-shadow: var(--g-shadow); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+  header p { opacity: 1; color: var(--g-muda); }
+  .logo-t { background: var(--g-titulo); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+  header input[type="date"] { background: var(--g-input); color: var(--g-texto); border: 1px solid var(--g-input-borda); }
+  .btn-hoje { background: transparent; color: var(--g-accent); border: 1px solid var(--g-accent2); }
+  .btn-hoje:hover { background: var(--g-hover); }
+  .btn-tema { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; background: var(--g-input); color: var(--g-accent); border: 1px solid var(--g-input-borda); }
+  .btn-tema svg { width: 18px; height: 18px; }
+  .btn-tema .i-sol { display: none; }
+  :root[data-theme="dark"] .btn-tema .i-sol { display: block; }
+  :root[data-theme="dark"] .btn-tema .i-lua { display: none; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+  /* Abas */
+  .tabs { background: var(--g-tabs); border-bottom: 1px solid var(--g-border); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+  .tab { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 9px 4px 8px; color: var(--g-muda); font-size: 12px; line-height: 1.15; text-align: center; border-bottom: 3px solid transparent; }
+  .tab .t2 { display: inline-flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; opacity: .9; }
+  .tab .t2 svg.i { width: 11px; height: 11px; }
+  .tab:hover { color: var(--g-accent); }
+  .tab.active { color: var(--g-accent); border-bottom-color: var(--g-accent2); background: rgba(34,211,238,.08); }
+  :root[data-theme="dark"] .tab.active { text-shadow: 0 0 12px rgba(34,211,238,.45); }
+
+  /* Vidro nos cartões */
+  .card-resumo, .entrada-total-card, .tabela-container, .fol-grupo, .fol-add-painel, .conferencia-card {
+    -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); border-radius: var(--g-radius); box-shadow: var(--g-shadow);
+  }
+  .card-resumo { background: var(--g-bg); border: 1px solid var(--g-border); }
+  .card-resumo { --kc: var(--g-ok); --kc-bg: rgba(34,197,94,.16); }
+  .card-resumo.laranja { --kc: var(--g-warn); --kc-bg: rgba(249,115,22,.16); }
+  .card-resumo.azul { --kc: var(--g-info); --kc-bg: rgba(59,130,246,.16); }
+  .card-resumo.vermelho { --kc: var(--g-bad); --kc-bg: rgba(239,68,68,.16); }
+  .card-resumo, .card-resumo.laranja, .card-resumo.azul, .card-resumo.vermelho { border-top: 3px solid var(--kc); }
+  .card-resumo .valor, .card-resumo.laranja .valor, .card-resumo.azul .valor, .card-resumo.vermelho .valor { color: var(--kc); font-variant-numeric: tabular-nums; }
+  .card-resumo .label { color: var(--g-muda); }
+  .card-resumo .sub { font-size: 11px; font-weight: 600; color: var(--g-muda); margin-top: 4px; }
+  .card-resumo.fol-card { text-align: left; }
+  .fol-card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .fol-card .top .label { margin: 0; }
+  .fol-card .ic { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 10px; color: var(--kc); background: var(--kc-bg); border: 1px solid var(--kc); }
+  .fol-card .ic svg.i { width: 18px; height: 18px; }
+
+  .entrada-total-card { background: var(--g-bg); border: 1px solid var(--g-border); border-left: 4px solid var(--g-info); }
+  .entrada-total-card label { color: var(--g-ok); }
+  #folNome { width: 210px; padding: 10px; background: var(--g-input); border: 2px solid var(--g-info); border-radius: 8px; text-align: center; font-size: 16px; font-weight: 700; color: var(--g-texto); }
+  #folNome:focus { outline: 2px solid var(--g-accent2); box-shadow: 0 0 0 3px rgba(59,130,246,.25); }
+
+  .tabela-container { background: var(--g-bg); border: 1px solid var(--g-border); }
+  .tabela-titulo.verde { background: linear-gradient(135deg,#2563eb,#7c3aed); }
+  thead th { background: var(--g-thead); color: var(--g-muda); border-bottom: 1px solid var(--g-linha); }
+  tbody td { border-bottom: 1px solid var(--g-linha); color: var(--g-texto); }
+  tbody td:first-child { color: var(--g-ok); }
+  tbody tr:hover { background: var(--g-hover); }
+  tr.total-row td { background: var(--g-ok-bg); color: var(--g-ok); border-top: 2px solid var(--g-ok); }
+
+  /* Conferência e avisos */
+  .conferencia-card.ok { background: var(--g-ok-bg); border: 1px solid var(--g-ok-bd); }
+  .conferencia-card.erro { background: var(--g-bad-bg); border: 1px solid var(--g-bad-bd); }
+  .conferencia-card.pendente { background: var(--g-warn-bg); border: 1px solid var(--g-warn-bd); }
+  .conferencia-card.ok .conferencia-titulo { color: var(--g-ok); }
+  .conferencia-card.erro .conferencia-titulo { color: var(--g-bad); }
+  .conferencia-card.pendente .conferencia-titulo { color: var(--g-warn-t); }
+  .conferencia-linhas div { background: var(--g-bg-forte); border: 1px solid var(--g-linha); }
+  .aviso-readonly { background: var(--g-warn-bg); border-left: 4px solid var(--g-warn); color: var(--g-warn-t); border-radius: 10px; }
+  .aviso-sync { background: var(--g-ok-bg); border-left: 4px solid var(--g-ok); color: var(--g-ok); border-radius: 10px; }
+  .loading { color: var(--g-muda); }
+  .spinner { border-color: var(--g-linha); border-top-color: var(--g-accent2); }
+
+  /* Campos */
+  input.qty { background: var(--g-input); border: 1px solid var(--g-input-borda); color: var(--g-texto); }
+  input.qty:focus { outline: 2px solid var(--g-accent2); border-color: var(--g-accent2); background: var(--g-bg-forte); box-shadow: 0 0 0 3px rgba(59,130,246,.25); }
+  input.qty.editado { background: rgba(250,204,21,.18); border-color: var(--g-warn); }
+  input.qty[readonly] { background: var(--g-warn-bg); color: var(--g-warn); border-color: var(--g-warn); }
+  input.qty.fisico { border-color: var(--g-info); background: var(--g-info-bg); }
+  input.qty.fisico::placeholder { color: var(--g-info); opacity: .65; font-weight: 700; }
+  input.qty.pend-input { border-color: var(--g-warn); background: var(--g-warn-bg); }
+  input.qty.invalido { border-color: var(--g-bad); background: var(--g-bad-bg); }
+  select, input[type="text"] { color: var(--g-texto); }
+  select option { background: var(--g-lista); color: var(--g-texto); }
+
+  /* Botões */
+  .btn-salvar { background: linear-gradient(135deg,#2563eb,#7c3aed); box-shadow: 0 4px 16px rgba(37,99,235,.35); }
+  .btn-salvar:hover { background: linear-gradient(135deg,#2563eb,#7c3aed); filter: brightness(1.12); box-shadow: 0 6px 22px rgba(124,58,237,.45); }
+  .btn-salvar:disabled { background: rgba(148,163,184,.55); box-shadow: none; filter: none; }
+  .toast { background: var(--g-toast); border: 1px solid var(--g-border); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+  .toast.erro { background: rgba(185,28,28,.94); }
+
+  /* Cartões de imagem (WhatsApp): sempre sólidos e claros, independente do tema */
+  #print-card, #print-card-fol { color: #1a1a1a; }
+  #print-card-fol { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.12); max-width: 440px; margin: 0 auto 20px; }
+  .print-produto-itens { font-size: 10px; color: var(--cinza-escuro); margin-top: 2px; }
+  .print-subtotais { margin: 8px 0 0; padding: 8px 14px; border-radius: 10px; background: var(--cinza); display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; font-weight: 700; color: var(--verde-escuro); }
+  .print-subtotais span { white-space: nowrap; }
+
+  /* Folhosas */
+  .fol-grupo { background: var(--g-bg); border: 1px solid var(--g-border); border-left: 4px solid var(--g-ok); margin-bottom: 12px; overflow: hidden; }
+  .fol-grupo-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px 2px; }
+  .fol-grupo-nome { font-size: 15px; font-weight: 800; color: var(--g-texto); }
+  .fol-saldo { text-align: right; }
+  .fol-saldo span { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; color: var(--g-muda); }
+  .fol-saldo b { font-size: 24px; font-weight: 900; color: var(--g-ok); font-variant-numeric: tabular-nums; }
+  .fol-saldo b.neg { color: var(--g-bad); }
+  .fol-formula { padding: 0 14px 10px; font-size: 11px; font-weight: 600; color: var(--g-muda); }
+  .fol-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 14px; border-top: 1px solid var(--g-linha); font-size: 14px; font-weight: 600; }
+  .fol-item input.qty { width: 120px; padding: 8px; font-size: 16px; }
+  .fol-rodape { padding: 9px 14px; font-size: 12px; font-weight: 700; background: var(--g-thead); color: var(--g-muda); }
+  .fol-rodape.ok { background: var(--g-ok-bg); color: var(--g-ok); }
+  .fol-rodape.falta { background: var(--g-bad-bg); color: var(--g-bad); }
+  .fol-rodape.sobra { background: var(--g-warn-bg); color: var(--g-warn-t); }
+
+  .fol-add { margin: 4px 0 16px; }
+  .fol-add-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border-radius: 12px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--g-accent); background: transparent; border: 1px dashed var(--g-accent2); }
+  .fol-add-btn:hover { background: var(--g-hover); }
+  .fol-add-painel { display: grid; gap: 10px; margin-top: 10px; padding: 14px; background: var(--g-bg); border: 1px solid var(--g-border); }
+  .fol-add-painel[hidden] { display: none; }
+  .fol-add-painel label { display: grid; gap: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--g-muda); }
+  .fol-add-painel select, .fol-add-painel input { width: 100%; padding: 10px; font-size: 16px; font-weight: 600; background: var(--g-input); border: 1px solid var(--g-input-borda); border-radius: 8px; text-transform: none; letter-spacing: 0; }
+  .fol-add-painel select:focus, .fol-add-painel input:focus { outline: 2px solid var(--g-accent2); box-shadow: 0 0 0 3px rgba(59,130,246,.25); }
+  .fol-add-painel .btn-salvar { margin: 0; width: 100%; padding: 12px; }
+  .fol-add-nota { font-size: 11px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--g-muda); }
+
+  /* Fallbacks */
+  @supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+    :root { --g-bg: #ffffff; --g-bg-forte: #f4f7ff; --g-header: #f1f5ff; --g-tabs: #e8eeff; --g-thead: #e3ebfb; }
+    :root[data-theme="dark"] { --g-bg: #0d1630; --g-bg-forte: #16244e; --g-header: #060c1e; --g-tabs: #060c1e; --g-thead: #0c1632; }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    :root { --g-bg: #ffffff; --g-bg-forte: #f4f7ff; --g-header: #f1f5ff; --g-tabs: #e8eeff; --g-thead: #e3ebfb; }
+    :root[data-theme="dark"] { --g-bg: #0d1630; --g-bg-forte: #16244e; --g-header: #060c1e; --g-tabs: #060c1e; --g-thead: #0c1632; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation-duration: .01ms !important; } }
 </style>
+<script>try{if(localStorage.getItem('tema')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 </head>
 <body>
+<div class="fundo-glass" aria-hidden="true"></div>
 <header>
   <div>
-    <h1>🍓 Estoque Futuro — AP Frutas</h1>
+    <h1><span class="logo-e">🍓</span> <span class="logo-t">Estoque Futuro — AP Frutas</span></h1>
     <p>Lançamento do colaborador</p>
   </div>
   <div class="data-selector">
     <input type="date" id="dataSelecionada">
     <button class="btn-hoje" onclick="irParaHoje()">Hoje</button>
+    <button class="btn-tema" type="button" onclick="alternarTema()" aria-label="Alternar tema claro/escuro" title="Tema claro/escuro"><svg class="i i-lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg><svg class="i i-sol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg></button>
   </div>
 </header>
 <div class="tabs">
-  <div class="tab active" onclick="mudarAba('lancamento', this)">📋 Lançamento</div>
-  <div class="tab" onclick="mudarAba('resultado', this)">📦 Estoque Final</div>
+  <div class="tab active" onclick="mudarAba('lancamento', this)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg><span class="t1">Lançamento</span><span class="t2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/><path d="M12 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/><path d="M7 14c3.22-2.91 4.29-8.75 5-12 1.66 2.38 4.94 9 5 12"/><path d="M22 9c-4.29 0-7.14-2.33-10-7 5.71 0 10 4.67 10 7Z"/></svg>Frutas</span></div>
+  <div class="tab" onclick="mudarAba('resultado', this)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span class="t1">Estoque Final</span><span class="t2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/><path d="M12 17a5 5 0 0 0 10 0c0-2.76-2.5-5-5-3-2.5-2-5 .24-5 3Z"/><path d="M7 14c3.22-2.91 4.29-8.75 5-12 1.66 2.38 4.94 9 5 12"/><path d="M22 9c-4.29 0-7.14-2.33-10-7 5.71 0 10 4.67 10 7Z"/></svg>Frutas</span></div>
+  <div class="tab" onclick="mudarAba('folhosas', this)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg><span class="t1">Lançamento</span><span class="t2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>Folhosas</span></div>
+  <div class="tab" onclick="mudarAba('folresultado', this)"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span class="t1">Estoque Final</span><span class="t2"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>Folhosas</span></div>
 </div>
 <main>
   <div id="secao-lancamento" class="secao ativa">
@@ -143,6 +329,12 @@
   </div>
   <div id="secao-resultado" class="secao">
     <div id="resultado-conteudo"><div class="loading"><div class="spinner"></div>Calculando...</div></div>
+  </div>
+  <div id="secao-folhosas" class="secao">
+    <div id="folhosas-conteudo"><div class="loading"><div class="spinner"></div>Carregando...</div></div>
+  </div>
+  <div id="secao-folresultado" class="secao">
+    <div id="folresultado-conteudo"><div class="loading"><div class="spinner"></div>Calculando...</div></div>
   </div>
 </main>
 <div class="toast" id="toast"></div>
@@ -153,6 +345,7 @@ const { createClient } = supabase;
 const db = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let produtos = [], dataSel = '';
+let abaAtiva = 'lancamento';
 let dadosColab = {};          // por produto: { inicial, quebra, final }  (final = estoque físico contado, null se ainda não contado)
 let saidasPrincipais = {};    // por produto: saída puxada do Planner (travada)
 let entradaTotal = 0;         // total único de entradas do dia (não é mais por produto)
@@ -160,14 +353,14 @@ let carimboCarregado = null;      // detecta conflito na tabela estoque_colabora
 let carimboGeralCarregado = null; // detecta conflito na tabela estoque_colaborador_geral
 
 window.addEventListener('DOMContentLoaded', async () => {
-  const hoje = new Date().toISOString().split('T')[0];
+  const hoje = hojeLocal();
   document.getElementById('dataSelecionada').value = hoje;
   dataSel = hoje;
-  document.getElementById('dataSelecionada').addEventListener('change', async (e) => { dataSel = e.target.value; await carregarTudo(); });
+  document.getElementById('dataSelecionada').addEventListener('change', async (e) => { if (!folPodeTrocarData(e.target)) return; dataSel = e.target.value; await carregarTudo(); });
   await carregarTudo();
 });
 
-function irParaHoje() { const h = new Date().toISOString().split('T')[0]; document.getElementById('dataSelecionada').value = h; dataSel = h; carregarTudo(); }
+function irParaHoje() { const h = hojeLocal(); if (h !== dataSel && !folPodeTrocarData(null)) return; document.getElementById('dataSelecionada').value = h; dataSel = h; carregarTudo(); }
 function formatarData(d) { const [a,m,dia] = d.split('-'); return `${dia}/${m}/${a}`; }
 function formatarHora() { return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
 
@@ -214,6 +407,8 @@ async function carregarTudo() {
   carimboGeralCarregado = geralRow?.atualizado_em || null;
 
   renderizarLancamento();
+  if (abaAtiva === 'folhosas') carregarFolhosas();
+  if (abaAtiva === 'folresultado') carregarFolhosas().then(renderizarResultadoFolhosas);
 }
 
 function calcularResumo() {
@@ -515,13 +710,466 @@ function mudarAba(aba, el) {
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(`secao-${aba}`).classList.add('ativa');
   el.classList.add('active');
+  abaAtiva = aba;
   if (aba === 'resultado') carregarResultado();
+  if (aba === 'folhosas') carregarFolhosas();
+  if (aba === 'folresultado') carregarFolhosas().then(renderizarResultadoFolhosas);
 }
 
 function mostrarToast(msg, erro=false) {
   const t = document.getElementById('toast');
   t.textContent = msg; t.className = `toast ${erro?'erro':''} visivel`;
   setTimeout(()=>t.classList.remove('visivel'), 4000);
+}
+/* ============================================================
+   FOLHOSAS — contagem final (Brócolis, Couve-flor, Alface)
+   Lê o saldo do dia do Planner:  Inicial (fol_contagem do dia)
+                                 + Entradas (fol_entrada_real)
+                                 − Vendas (fol_venda_real)
+   e grava a contagem final em fol_contagem do DIA SEGUINTE,
+   que é o Estoque Inicial de amanhã no Planner.
+   ============================================================ */
+const fol = { dataCarregada: null, grupos: [], itens: [], inicial: {}, entrada: {}, venda: {}, existentes: {}, valores: {}, carimbo: null, sujo: false, nome: '', addAberto: false };
+let folReq = 0;
+
+// Ícones Lucide inline (sem CDN)
+const ICONES = {
+  leaf: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+  plus: '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg>'
+};
+
+function alternarTema() {
+  const root = document.documentElement;
+  const escuro = root.getAttribute('data-theme') !== 'dark';
+  if (escuro) root.setAttribute('data-theme', 'dark'); else root.removeAttribute('data-theme');
+  try { localStorage.setItem('tema', escuro ? 'dark' : 'light'); } catch (e) {}
+}
+
+function hojeLocal() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function fmt(n) { return Number(n).toLocaleString('pt-BR'); }
+function somaPor(lista, fn) { return lista.reduce((s, x) => s + fn(x), 0); }
+function folNomeSalvo() { try { return localStorage.getItem('fol_nome') || ''; } catch (e) { return ''; } }
+function folGuardarNome(v) { fol.nome = v; try { localStorage.setItem('fol_nome', v); } catch (e) {} }
+function folUltimoCarimbo(rows) { return (rows || []).reduce((m, r) => (r.enviado_em && (!m || r.enviado_em > m)) ? r.enviado_em : m, null); }
+
+// Evita perder valores digitados e não salvos ao trocar de data
+function folPodeTrocarData(input) {
+  if (fol.sujo && fol.dataCarregada !== null) {
+    if (!confirm('Você digitou valores em Folhosas que ainda não foram salvos.\n\nTrocar a data descarta esses valores. Continuar?')) {
+      if (input) input.value = dataSel;
+      return false;
+    }
+    fol.sujo = false;
+  }
+  return true;
+}
+
+async function carregarFolhosas() {
+  const el = document.getElementById('folhosas-conteudo');
+  if (fol.sujo && fol.dataCarregada === dataSel) return; // mantém o que já foi digitado
+  const req = ++folReq, dia = dataSel, prox = proximoDia(dia);
+  el.innerHTML = '<div class="loading"><div class="spinner"></div>Buscando saldo do Planner...</div>';
+  try {
+    const [g, i, c, e, v, p] = await Promise.all([
+      db.from('fol_grupos').select('*').eq('ativo', true).order('ordem'),
+      db.from('fol_itens').select('*').eq('ativo', true).order('ordem'),
+      db.from('fol_contagem').select('*').eq('data', dia),
+      db.from('fol_entrada_real').select('item_id, quantidade').eq('data', dia),
+      db.from('fol_venda_real').select('grupo_id, quantidade').eq('data', dia),
+      db.from('fol_contagem').select('*').eq('data', prox)
+    ]);
+    for (const r of [g, i, c, e, v, p]) if (r.error) throw r.error;
+    if (req !== folReq) return; // chegou outra requisição depois (troca de data)
+
+    fol.grupos = g.data || [];
+    const gids = new Set(fol.grupos.map(x => x.id));
+    fol.itens = (i.data || []).filter(x => gids.has(x.grupo_id));
+    const iids = new Set(fol.itens.map(x => x.id));
+
+    fol.inicial = {}; fol.entrada = {}; fol.venda = {}; fol.existentes = {};
+    (c.data || []).forEach(r => { if (iids.has(r.item_id)) fol.inicial[r.item_id] = (fol.inicial[r.item_id] || 0) + Number(r.quantidade || 0); });
+    (e.data || []).forEach(r => { if (iids.has(r.item_id)) fol.entrada[r.item_id] = (fol.entrada[r.item_id] || 0) + Number(r.quantidade || 0); });
+    (v.data || []).forEach(r => { if (gids.has(r.grupo_id)) fol.venda[r.grupo_id] = (fol.venda[r.grupo_id] || 0) + Number(r.quantidade || 0); });
+    (p.data || []).slice().sort((a, b) => String(a.enviado_em).localeCompare(String(b.enviado_em))).forEach(r => {
+      if (!fol.existentes[r.item_id]) fol.existentes[r.item_id] = [];
+      fol.existentes[r.item_id].push(r);
+    });
+    fol.carimbo = folUltimoCarimbo(p.data);
+    fol.valores = {};
+    fol.itens.forEach(it => {
+      const ex = fol.existentes[it.id];
+      fol.valores[it.id] = (ex && ex.length) ? Number(ex[ex.length - 1].quantidade) : null;
+    });
+    fol.dataCarregada = dia;
+    fol.sujo = false;
+    if (!fol.nome) fol.nome = folNomeSalvo();
+    renderizarFolhosas();
+  } catch (err) {
+    if (req !== folReq) return;
+    el.innerHTML = `<div class="conferencia-card erro"><div class="conferencia-titulo">❌ Não consegui buscar os dados das folhosas</div>
+      <div style="font-size:12px;margin-bottom:10px">${esc(err && err.message ? err.message : err)}</div>
+      <button class="btn-salvar" style="margin:0" onclick="carregarFolhosas()">🔄 Tentar de novo</button></div>`;
+  }
+}
+
+function folCalc() {
+  return fol.grupos.map(g => {
+    const its = fol.itens.filter(i => i.grupo_id === g.id);
+    const ini = somaPor(its, i => fol.inicial[i.id] || 0);
+    const ent = somaPor(its, i => fol.entrada[i.id] || 0);
+    const ven = fol.venda[g.id] || 0;
+    const saldo = ini + ent - ven;
+    const preenchidos = its.filter(i => fol.valores[i.id] !== null && fol.valores[i.id] !== undefined).length;
+    const completo = its.length > 0 && preenchidos === its.length;
+    const contado = somaPor(its, i => fol.valores[i.id] || 0);
+    return { g, its, ini, ent, ven, saldo, preenchidos, completo, contado, diff: completo ? saldo - contado : null };
+  }).filter(c => c.its.length > 0);
+}
+
+function renderizarFolhosas() {
+  const el = document.getElementById('folhosas-conteudo');
+  const prox = proximoDia(dataSel);
+  const calc = folCalc();
+  if (calc.length === 0) {
+    el.innerHTML = '<div class="aviso-readonly">Nenhum grupo/item ativo de folhosas encontrado no Planner.</div>';
+    return;
+  }
+  const prods = [...new Set(calc.map(c => c.g.produto))];
+  const cores = ['', 'laranja', 'azul'];
+
+  const todosExistentes = [].concat(...Object.values(fol.existentes));
+  let avisoExistente = '';
+  if (todosExistentes.length) {
+    const ult = todosExistentes.reduce((m, r) => (!m || String(r.enviado_em) > String(m.enviado_em)) ? r : m, null);
+    const quando = new Date(ult.enviado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+    avisoExistente = `<div class="aviso-readonly">📌 Já existe contagem para ${formatarData(prox)} (enviada por <b>${esc(ult.enviado_por || '—')}</b> em ${quando}). Os campos abaixo vêm preenchidos com ela — ao salvar, ela será substituída.</div>`;
+  }
+  const semInicial = Object.keys(fol.inicial).length === 0
+    ? `<div class="aviso-readonly">⚠️ Não há Estoque Inicial lançado no Planner para ${formatarData(dataSel)}. O saldo calculado abaixo considera inicial = 0.</div>` : '';
+
+  let html = `<div class="aviso-sync">🔄 Ao salvar, a contagem final de ${formatarData(dataSel)} vira o <b>Estoque Inicial de ${formatarData(prox)}</b> das folhosas no Planner</div>
+  <div class="entrada-total-card">
+    <label>👤 Quem está lançando?</label>
+    <input type="text" id="folNome" placeholder="Seu nome" maxlength="40" value="${esc(fol.nome)}" oninput="folGuardarNome(this.value)">
+  </div>
+  ${avisoExistente}${semInicial}
+  <div class="cards-resumo">
+    ${prods.map((p, idx) => `<div class="card-resumo fol-card ${cores[idx % cores.length]}"><div class="top"><span class="ic">${ICONES.leaf}</span><div class="label">Saldo ${esc(p)}</div></div><div class="valor" id="fp-calc-${idx}">0</div><div class="sub" id="fp-cont-${idx}"></div></div>`).join('')}
+  </div>
+  <div id="fol-conferencia"></div>
+  <div class="aviso-readonly">🔒 O saldo do dia vem do Planner (inicial + entradas − vendas) e não é editável. Digite o que você <b>contou</b> no estoque, item por item.</div>`;
+
+  calc.forEach(c => {
+    html += `<div class="fol-grupo">
+      <div class="fol-grupo-topo">
+        <div class="fol-grupo-nome">${esc(c.g.nome)}</div>
+        <div class="fol-saldo"><span>Saldo do dia</span><b class="${c.saldo < 0 ? 'neg' : ''}">${fmt(c.saldo)}</b></div>
+      </div>
+      <div class="fol-formula">Inicial ${fmt(c.ini)} + Entradas ${fmt(c.ent)} − Vendas ${fmt(c.ven)}</div>
+      ${c.its.map(i => {
+        const val = fol.valores[i.id];
+        return `<label class="fol-item"><span>${esc(i.rotulo)}</span>
+          <input type="number" inputmode="numeric" class="qty fisico" min="0" step="1" placeholder="contar" value="${val === null || val === undefined ? '' : val}" data-item="${i.id}" oninput="folDigitou(this)" onfocus="this.select()"></label>`;
+      }).join('')}
+      <div class="fol-rodape" id="fgr-${c.g.id}"></div>
+    </div>`;
+  });
+
+  html += `<div class="fol-add">
+    <button class="fol-add-btn" type="button" onclick="folToggleAdd()">${ICONES.plus} Adicionar item</button>
+    <div class="fol-add-painel" id="fol-add-painel" ${fol.addAberto ? '' : 'hidden'}>
+      <label>Grupo<select id="folAddGrupo">${fol.grupos.map(g => `<option value="${g.id}">${esc(g.nome)}</option>`).join('')}</select></label>
+      <label>Nome do item<input type="text" id="folAddNome" maxlength="40" placeholder="Ex.: Granel RJ" onkeydown="if(event.key==='Enter'){folAdicionarItem();}"></label>
+      <div class="fol-add-nota">O item fica cadastrado para todos e passa a aparecer também no Planner.</div>
+      <button class="btn-salvar" type="button" id="folAddOk" onclick="folAdicionarItem()">Adicionar item ao grupo</button>
+    </div>
+  </div>
+  <button class="btn-salvar" id="folBtnSalvar" onclick="salvarFolhosas()">💾 Salvar contagem das folhosas</button>`;
+  el.innerHTML = html;
+  folAtualizar();
+}
+
+function folToggleAdd() {
+  fol.addAberto = !fol.addAberto;
+  const p = document.getElementById('fol-add-painel');
+  if (!p) return;
+  p.hidden = !fol.addAberto;
+  if (fol.addAberto) { const n = document.getElementById('folAddNome'); if (n) n.focus(); }
+}
+
+async function folAdicionarItem() {
+  const gid = (document.getElementById('folAddGrupo') || {}).value;
+  const campo = document.getElementById('folAddNome');
+  const rotulo = ((campo && campo.value) || '').trim().replace(/\s+/g, ' ');
+  if (!gid) { mostrarToast('❌ Escolha o grupo do item.', true); return; }
+  if (rotulo.length < 2) { mostrarToast('❌ Digite o nome do item (mínimo 2 letras).', true); if (campo) campo.focus(); return; }
+  if (fol.itens.some(i => i.grupo_id === gid && String(i.rotulo).toLowerCase() === rotulo.toLowerCase())) {
+    mostrarToast('❌ Esse item já existe nesse grupo.', true); if (campo) campo.focus(); return;
+  }
+  const btn = document.getElementById('folAddOk');
+  btn.disabled = true; btn.textContent = '⏳ Adicionando...';
+  try {
+    const ordem = Math.max(0, ...fol.itens.map(i => Number(i.ordem) || 0)) + 1;
+    const { data, error } = await db.from('fol_itens').insert([{ grupo_id: gid, rotulo, ordem }]).select();
+    if (error) throw error;
+    const novo = (data || [])[0];
+    if (!novo) throw new Error('O item não foi criado. Tente de novo.');
+    fol.itens.push(novo);
+    fol.itens.sort((a, b) => (Number(a.ordem) || 0) - (Number(b.ordem) || 0));
+    fol.valores[novo.id] = null;
+    fol.addAberto = false;
+    renderizarFolhosas(); // mantém o que já foi digitado (fica em fol.valores)
+    mostrarToast('✅ Item "' + rotulo + '" adicionado. Agora é só contar.');
+  } catch (e) {
+    mostrarToast('❌ Erro ao adicionar: ' + (e && e.message ? e.message : e), true);
+    btn.disabled = false; btn.textContent = 'Adicionar item ao grupo';
+  }
+}
+
+function folDigitou(input) {
+  const id = input.dataset.item, txt = input.value.trim();
+  input.classList.remove('pend-input', 'invalido');
+  if (txt === '') fol.valores[id] = null;
+  else {
+    const n = Number(txt);
+    if (!Number.isInteger(n) || n < 0) { fol.valores[id] = null; input.classList.add('invalido'); }
+    else fol.valores[id] = n;
+  }
+  fol.sujo = true;
+  folAtualizar();
+}
+
+function folAtualizar() {
+  const calc = folCalc();
+  calc.forEach(c => {
+    const r = document.getElementById('fgr-' + c.g.id);
+    if (!r) return;
+    let cls = '', txt;
+    if (!c.completo) txt = `Contado até agora: ${fmt(c.contado)} · faltam ${c.its.length - c.preenchidos} item(ns)`;
+    else if (c.diff === 0) { cls = 'ok'; txt = `✅ Confere — contado ${fmt(c.contado)}`; }
+    else if (c.diff > 0) { cls = 'falta'; txt = `❌ Falta ${fmt(c.diff)} un. (saldo ${fmt(c.saldo)} · contado ${fmt(c.contado)})`; }
+    else { cls = 'sobra'; txt = `⚠️ Sobra ${fmt(-c.diff)} un. (saldo ${fmt(c.saldo)} · contado ${fmt(c.contado)})`; }
+    r.className = 'fol-rodape ' + cls;
+    r.textContent = txt;
+  });
+
+  const prods = [...new Set(calc.map(c => c.g.produto))];
+  prods.forEach((p, idx) => {
+    const cs = calc.filter(c => c.g.produto === p);
+    const a = document.getElementById('fp-calc-' + idx), b = document.getElementById('fp-cont-' + idx);
+    if (a) a.textContent = fmt(somaPor(cs, c => c.saldo));
+    if (b) b.textContent = 'Contado: ' + fmt(somaPor(cs, c => c.contado));
+  });
+
+  const conf = document.getElementById('fol-conferencia');
+  if (!conf) return;
+  const totSaldo = somaPor(calc, c => c.saldo), totCont = somaPor(calc, c => c.contado);
+  const pend = somaPor(calc, c => c.its.length - c.preenchidos);
+  const divergentes = calc.filter(c => c.completo && c.diff !== 0);
+  let cls, titulo;
+  if (pend > 0) { cls = 'pendente'; titulo = `✏️ Faltam ${pend} item(ns) para contar`; }
+  else if (divergentes.length === 0) { cls = 'ok'; titulo = '✅ Estoque batendo — a contagem confere com o saldo em todos os grupos'; }
+  else { cls = 'erro'; titulo = `❌ ${divergentes.length} grupo(s) com diferença entre saldo e contagem`; }
+  const linhas = divergentes.map(c => `<div>${esc(c.g.nome)}<b>${c.diff > 0 ? 'falta ' : 'sobra '}${fmt(Math.abs(c.diff))}</b></div>`).join('');
+  conf.innerHTML = `<div class="conferencia-card ${cls}">
+    <div class="conferencia-titulo">${titulo}</div>
+    <div class="conferencia-linhas"><div>Saldo calculado<b>${fmt(totSaldo)}</b></div><div>Contado<b>${fmt(totCont)}</b></div>${linhas}</div>
+  </div>`;
+}
+
+async function salvarFolhosas() {
+  const btn = document.getElementById('folBtnSalvar');
+  const campoNome = document.getElementById('folNome');
+  const nome = (campoNome.value || '').trim();
+  if (!nome) { mostrarToast('❌ Digite seu nome antes de salvar.', true); campoNome.focus(); return; }
+
+  const faltando = fol.itens.filter(i => fol.valores[i.id] === null || fol.valores[i.id] === undefined);
+  if (faltando.length) {
+    const ids = new Set(faltando.map(i => i.id));
+    let primeiro = null;
+    document.querySelectorAll('#folhosas-conteudo input[data-item]').forEach(inp => {
+      if (ids.has(inp.dataset.item) && !inp.classList.contains('invalido')) { inp.classList.add('pend-input'); if (!primeiro) primeiro = inp; }
+    });
+    if (primeiro) primeiro.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    mostrarToast('❌ Falta contar (ou valor inválido): ' + faltando.map(i => i.rotulo).join(', '), true);
+    return;
+  }
+
+  const divergentes = folCalc().filter(c => c.completo && c.diff !== 0);
+  if (divergentes.length && !confirm(`Há diferença entre o saldo e a contagem em ${divergentes.length} grupo(s):\n\n` +
+      divergentes.map(c => `• ${c.g.nome}: ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}`).join('\n') +
+      '\n\nSalvar mesmo assim?')) return;
+
+  const dia = dataSel, prox = proximoDia(dia);
+  btn.disabled = true; btn.textContent = '⏳ Salvando...';
+  try {
+    // Relê o que existe agora em D+1: detecta alteração de outra pessoa e evita duplicar linhas
+    const { data: atuais, error: errA } = await db.from('fol_contagem').select('*').eq('data', prox);
+    if (errA) throw errA;
+    if (folUltimoCarimbo(atuais) !== fol.carimbo) {
+      if (!confirm('⚠️ A contagem de ' + formatarData(prox) + ' foi alterada por outra pessoa depois que você abriu esta tela.\n\nOK = sobrescrever mesmo assim\nCancelar = recarregar os dados mais recentes')) {
+        fol.sujo = false;
+        await carregarFolhosas();
+        mostrarToast('🔄 Dados recarregados. Confira antes de salvar novamente.', true);
+        return;
+      }
+    }
+
+    const porItem = {};
+    (atuais || []).slice().sort((a, b) => String(a.enviado_em).localeCompare(String(b.enviado_em))).forEach(r => {
+      if (!porItem[r.item_id]) porItem[r.item_id] = [];
+      porItem[r.item_id].push(r);
+    });
+
+    const agora = new Date().toISOString();
+    const inserir = [], operacoes = [], duplicadas = [];
+    fol.itens.forEach(it => {
+      const dados = { quantidade: fol.valores[it.id], enviado_por: nome, enviado_em: agora };
+      const ex = porItem[it.id];
+      if (ex && ex.length) {
+        operacoes.push(db.from('fol_contagem').update(dados).eq('id', ex[ex.length - 1].id));
+        ex.slice(0, -1).forEach(r => duplicadas.push(r.id)); // sobra de linhas repetidas do mesmo item/dia
+      } else {
+        inserir.push(Object.assign({ data: prox, item_id: it.id }, dados));
+      }
+    });
+    if (inserir.length) operacoes.push(db.from('fol_contagem').insert(inserir));
+    const resultados = await Promise.all(operacoes);
+    const falha = resultados.find(r => r.error);
+    if (falha) throw falha.error;
+    if (duplicadas.length) {
+      const { error: errD } = await db.from('fol_contagem').delete().in('id', duplicadas);
+      if (errD) throw errD;
+    }
+
+    fol.sujo = false;
+    await carregarFolhosas();
+    mostrarToast('✅ Contagem salva! Já é o Estoque Inicial de ' + formatarData(prox) + ' no Planner.');
+  } catch (e) {
+    mostrarToast('❌ Erro ao salvar: ' + (e && e.message ? e.message : e), true);
+  } finally {
+    const b = document.getElementById('folBtnSalvar');
+    if (b) { b.disabled = false; b.textContent = '💾 Salvar contagem das folhosas'; }
+  }
+}
+
+/* ============================================================
+   ESTOQUE FINAL FOLHOSAS — cartão para enviar no WhatsApp
+   (usa o estado já carregado em `fol`, sem consultar o banco de novo)
+   ============================================================ */
+function renderizarResultadoFolhosas() {
+  const el = document.getElementById('folresultado-conteudo');
+  const calc = folCalc();
+  if (calc.length === 0) {
+    el.innerHTML = '<div class="aviso-readonly">Nenhum grupo/item ativo de folhosas encontrado no Planner.</div>';
+    return;
+  }
+  const pend = somaPor(calc, c => c.its.length - c.preenchidos);
+  const divergentes = calc.filter(c => c.completo && c.diff !== 0);
+  const totFisico = somaPor(calc.filter(c => c.completo), c => c.contado);
+
+  const confClasse = (pend === 0 && divergentes.length === 0) ? 'ok' : 'erro';
+  const confTexto = pend > 0 ? `✏️ CONTAGEM INCOMPLETA — FALTAM ${pend} ITEM(NS)`
+    : divergentes.length === 0 ? '✅ ESTOQUE BATENDO' : `❌ DIFERENÇA EM ${divergentes.length} GRUPO(S)`;
+
+  let avisoClasse, avisoTitulo, avisoDetalhe;
+  if (pend > 0) {
+    avisoClasse = 'sobra'; avisoTitulo = `✏️ CONTAGEM INCOMPLETA (${pend} item(ns))`;
+    avisoDetalhe = 'Ainda faltam itens a contar. Volte em Lançamento Folhosas e preencha tudo antes de enviar.';
+  } else if (divergentes.length === 0) {
+    avisoClasse = 'ok'; avisoTitulo = '✅ ESTOQUE CORRETO';
+    avisoDetalhe = 'A contagem física bate com o saldo calculado do Planner em todos os grupos.';
+  } else {
+    avisoClasse = 'falta'; avisoTitulo = `❌ DIFERENÇA EM ${divergentes.length} GRUPO(S)`;
+    avisoDetalhe = divergentes.map(c => `${esc(c.g.nome)}: ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}`).join(' • ');
+  }
+
+  const naoSalvo = fol.sujo
+    ? '<div class="aviso-readonly">⚠️ Há valores digitados que ainda não foram salvos. Salve em Lançamento Folhosas para enviar ao Planner.</div>' : '';
+
+  let html = `${naoSalvo}<button class="btn-print" onclick="gerarImagemFolhosas()">📲 Gerar Imagem para WhatsApp</button>
+  <div id="print-card-fol">
+    <div class="print-header">
+      <h2>🥬 ESTOQUE FUTURO FOLHOSAS AP</h2>
+      <div class="print-data">📅 ${formatarData(dataSel)}</div>
+      <div class="print-hora">⏰ ${formatarHora()}</div>
+    </div>
+    <div class="print-conferencia ${confClasse}">${confTexto}</div>
+    <div class="print-body">`;
+
+  calc.forEach(c => {
+    const cls = c.completo ? '' : 'zero';
+    const valor = c.completo ? fmt(c.contado) : '—';
+    const pct = (c.completo && c.contado > 0 && totFisico > 0) ? (c.contado / totFisico * 100).toFixed(1).replace('.', ',') + '%' : '—';
+    const itens = c.its.length > 1
+      ? `<div class="print-produto-itens">${c.its.map(i => `${esc(i.rotulo)} ${fol.valores[i.id] == null ? '—' : fmt(fol.valores[i.id])}`).join(' · ')}</div>` : '';
+    const dif = (c.completo && c.diff !== 0)
+      ? `<div class="print-produto-detalhes" style="color:var(--vermelho);font-weight:700">saldo ${fmt(c.saldo)} · ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}</div>` : '';
+    html += `<div class="print-produto ${cls}">
+      <div>
+        <div class="print-produto-nome">${esc(c.g.nome)}</div>
+        <div class="print-produto-detalhes">Ini:${fmt(c.ini)} +Ent:${fmt(c.ent)} −Sai:${fmt(c.ven)}</div>
+        ${itens}${dif}
+      </div>
+      <div>
+        <div class="print-produto-saldo">${valor}</div>
+        <div class="print-produto-pct">${pct}</div>
+      </div>
+    </div>`;
+  });
+
+  const prods = [...new Set(calc.map(c => c.g.produto))];
+  html += `<div class="print-subtotais">${prods.map(p => {
+    const cs = calc.filter(c => c.g.produto === p && c.completo);
+    return `<span>${esc(p)}: ${cs.length ? fmt(somaPor(cs, c => c.contado)) : '—'}</span>`;
+  }).join('')}</div>
+    <div class="print-total">
+      <div class="print-total-label">TOTAL FÍSICO</div>
+      <div class="print-total-valor">${fmt(totFisico)}</div>
+    </div></div>
+    <div class="print-aviso-final ${avisoClasse}">
+      <div class="print-aviso-final-titulo">${avisoTitulo}</div>
+      <div class="print-aviso-final-detalhe">${avisoDetalhe}</div>
+    </div>
+    <div class="print-footer">AP Frutas & Verduras • ${formatarData(dataSel)} • Contagem: ${esc(fol.nome || '—')}</div>
+  </div>`;
+  el.innerHTML = html;
+}
+
+async function gerarImagemFolhosas() {
+  const btn = document.querySelector('#secao-folresultado .btn-print');
+  if (!btn) return;
+  const textoOriginal = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Gerando imagem...';
+  const nomeArq = `estoque-folhosas-${dataSel}.png`;
+  try {
+    const canvas = await html2canvas(document.getElementById('print-card-fol'), { backgroundColor: '#ffffff', scale: 2 });
+    canvas.toBlob(async (blob) => {
+      if (!blob) { mostrarToast('❌ Erro ao gerar imagem.', true); btn.disabled = false; btn.textContent = textoOriginal; return; }
+      const arquivo = new File([blob], nomeArq, { type: 'image/png' });
+      if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+        try {
+          await navigator.share({ files: [arquivo], title: 'Estoque Futuro Folhosas AP', text: `Estoque Folhosas — ${formatarData(dataSel)}` });
+          mostrarToast('✅ Imagem pronta para envio!');
+        } catch (e) { /* usuário cancelou o compartilhamento — não é erro */ }
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = nomeArq;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        mostrarToast('📥 Imagem baixada! Agora é só enviar no grupo do WhatsApp.');
+      }
+      btn.disabled = false; btn.textContent = textoOriginal;
+    }, 'image/png');
+  } catch (e) {
+    mostrarToast('❌ Erro ao gerar imagem: ' + e.message, true);
+    btn.disabled = false; btn.textContent = textoOriginal;
+  }
 }
 </script>
 </body>
