@@ -885,7 +885,7 @@ function renderizarFolhosas() {
     avisoExistente = `<div class="aviso-readonly">📌 Já existe Estoque Inicial de ${formatarData(dataSel)} no Planner (lançado em ${quando}). Os campos vêm preenchidos com ele — ao salvar, ele será substituído.</div>`;
   }
 
-  let html = `<div class="aviso-sync">🔄 Ao salvar, a contagem vira <b>na hora</b> o <b>Estoque Inicial de ${formatarData(dataSel)}</b> das folhosas no Planner. Conferência: saldo de ontem (${formatarData(ref)}).</div>
+  let html = `<div class="aviso-sync">🔄 Ao salvar, a contagem vira <b>na hora</b> o <b>Estoque Inicial de HOJE (${formatarData(hojeLocal())})</b> das folhosas no Planner${dataSel !== hojeLocal() ? ' — mesmo com outra data aberta aqui' : ''}. Conferência: saldo de ontem (${formatarData(ref)}).</div>
   ${avisoExistente}
   <div class="cards-resumo">
     ${prods.map((p, idx) => `<div class="card-resumo fol-card ${cores[idx % cores.length]}"><div class="top"><span class="ic">${ICONES.leaf}</span><div class="label">Esperado ${esc(p)}</div></div><div class="valor" id="fp-calc-${idx}">0</div><div class="sub" id="fp-cont-${idx}"></div></div>`).join('')}
@@ -1039,13 +1039,13 @@ async function salvarFolhosas() {
       divergentes.map(c => `• ${c.g.nome}: ${c.diff > 0 ? 'falta' : 'sobra'} ${fmt(Math.abs(c.diff))}`).join('\n') +
       '\n\nSalvar mesmo assim?')) return;
 
-  const dia = dataSel;
+  const dia = hojeLocal(); // sempre grava como Estoque Inicial de HOJE, não importa a data aberta na tela
   btn.disabled = true; btn.textContent = '⏳ Salvando...';
   try {
     // Relê o que existe agora em D: detecta alteração de outra pessoa e evita duplicar linhas
     const { data: atuais, error: errA } = await db.from('fol_contagem').select('*').eq('data', dia);
     if (errA) throw errA;
-    if (folUltimoCarimbo(atuais) !== fol.carimbo) {
+    if (dia === fol.dataCarregada && folUltimoCarimbo(atuais) !== fol.carimbo) {
       if (!confirm('⚠️ O Estoque Inicial de ' + formatarData(dia) + ' foi alterado por outra pessoa depois que você abriu esta tela.\n\nOK = sobrescrever mesmo assim\nCancelar = recarregar os dados mais recentes')) {
         fol.sujo = false;
         await carregarFolhosas();
@@ -1082,7 +1082,8 @@ async function salvarFolhosas() {
     }
 
     fol.sujo = false;
-    await carregarFolhosas();
+    if (dataSel !== dia) { dataSel = dia; const inp = document.getElementById('dataSelecionada'); if (inp) inp.value = dia; await carregarTudo(); }
+    else await carregarFolhosas();
     mostrarToast('✅ Contagem salva! Já é o Estoque Inicial de ' + formatarData(dia) + ' no Planner.');
   } catch (e) {
     mostrarToast('❌ Erro ao salvar: ' + (e && e.message ? e.message : e), true);
