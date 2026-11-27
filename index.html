@@ -734,7 +734,7 @@ function mudarAba(aba, el) {
   el.classList.add('active');
   abaAtiva = aba;
   if (aba === 'resultado') carregarResultado();
-  if (aba === 'folhosas') carregarFolhosas();
+  if (aba === 'folhosas') folRecarregarPreservando();
   if (aba === 'folresultado') carregarFolhosas().then(renderizarResultadoFolhosas);
 }
 
@@ -1092,6 +1092,11 @@ async function salvarFolhosas() {
     if (b) { b.disabled = false; b.textContent = '💾 Salvar contagem das folhosas'; }
   }
 }
+
+// Ao voltar para o app (celular desbloqueado, outra aba do navegador), atualiza a lista de itens sem perder o que foi digitado
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && abaAtiva === 'folhosas' && !document.getElementById('folBtnSalvar')?.disabled) folRecarregarPreservando();
+});
 
 /* ============================================================
    ESTOQUE FINAL FOLHOSAS — cartão para enviar no WhatsApp
